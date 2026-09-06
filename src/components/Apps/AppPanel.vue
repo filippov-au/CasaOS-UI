@@ -1,5 +1,6 @@
 <script>
 import AppSideBar from './AppSideBar.vue'
+import AppUpdates from './AppUpdates.vue'
 import ImportPanel from '../forms/ImportPanel.vue'
 import LottieAnimation from 'lottie-web-vue'
 import '@/plugins/vee-validate'
@@ -53,6 +54,7 @@ const data = [
 
 export default {
   components: {
+    AppUpdates,
     AppStoreSourceManagement,
     AppDetailInfo,
     AppSideBar,
@@ -94,6 +96,7 @@ export default {
   data() {
     return {
       timer: 0,
+      storeTab: 'browse',
       data: [],
       isLoading: true,
       isFetching: false,
@@ -1302,6 +1305,14 @@ export default {
       <!-- Modal-Card Body Start -->
       <!-- App Store List Start -->
       <section v-if="currentSlide == 0" :class="{ _hideOverflow: !isCasa }" class="modal-card-body pt-3 _pl">
+        <div class="tabs mb-4" role="tablist" :aria-label="$t('App Store')">
+          <ul>
+            <li :class="{ 'is-active': storeTab === 'browse' }"><a role="tab" :aria-selected="storeTab === 'browse'" href="#" @click.prevent="storeTab = 'browse'">{{ $t('Browse') }}</a></li>
+            <li :class="{ 'is-active': storeTab === 'updates' }"><a role="tab" :aria-selected="storeTab === 'updates'" href="#" @click.prevent="storeTab = 'updates'">{{ $t('Updates') }}</a></li>
+          </ul>
+        </div>
+        <AppUpdates v-if="storeTab === 'updates'" />
+        <template v-else>
         <template v-if="!isLoadError">
           <template v-if="recommendList.length > 0">
             <h3 class="title is-5 has-text-weight-normal">
@@ -1667,6 +1678,7 @@ export default {
               </b-button>
             </div>
           </div>
+        </template>
         </template>
       </section>
       <!-- App Store List End -->
