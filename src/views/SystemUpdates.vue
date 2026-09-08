@@ -84,6 +84,7 @@
 <script>
 import { marked } from 'marked'
 import UpdateModal from '@/components/settings/UpdateModal.vue'
+import { systemUpdateStatus, systemUpdateLabels, validCommit } from '@/service/system-update-status'
 
 export default {
   name: 'SystemUpdates',
@@ -92,24 +93,19 @@ export default {
     source() { return this.info?.source },
     repositories() { return this.source?.repositories || [] },
     running() { return this.source?.operation === 'running' },
-    canUpdate() { return Boolean(this.info?.need_update && !this.error && (!this.source || this.source.enabled)) },
+    updateStatus() { return systemUpdateStatus(this.info, this.error) },
+    canUpdate() { return this.updateStatus === 'available' },
     releaseNotes() { return marked.parse(this.info?.version?.change_log || '') },
     statusText() {
-      if (this.running) return this.$t('System update in progress')
-      if (this.error) return this.$t('Unable to check for updates')
-      if (!this.info) return this.$t('Checking for updates')
-      if (this.source && !this.source.enabled) return this.$t('Source updater setup required')
-      if (this.info.need_update) return this.$t('Update available')
-      if (this.source && (!this.repositories.length || this.repositories.some(repo => !this.validCommit(repo.installed) || !this.validCommit(repo.latest)))) return this.$t('Update status unknown')
-      return this.$t('Up to date')
+      return this.$t(systemUpdateLabels[this.updateStatus])
     },
   },
   mounted() { this.refresh() },
   beforeDestroy() { this.disposed = true; clearTimeout(this.timer) },
   methods: {
-    validCommit(commit) { return /^[0-9a-f]{40}$/i.test(commit || '') },
+    validCommit,
     latestCommit(repo) { return this.error ? '' : repo.latest },
-    changed(repo) { return this.validCommit(repo.installed) && this.validCommit(this.latestCommit(repo)) && repo.installed !== repo.latest },
+    changed(repo) { return this.validCommit(repo.installed) && this.validCommit(this.latestCommit(repo)) && repo.installed.toLowerCase() !== repo.latest.toLowerCase() },
     repoStatus(repo) {
       if (!this.validCommit(repo.installed) || !this.validCommit(this.latestCommit(repo))) return this.$t('Unknown')
       return this.$t(this.changed(repo) ? 'Update available' : 'Up to date')

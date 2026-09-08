@@ -461,5 +461,19 @@
   "Checking for updates": "Checking for updates",
   "Source updater setup required": "Source updater setup required",
   "View updates": "View updates",
-  "Update status unknown": "Update status unknown"
+  "Update status unknown": "Update status unknown",
+  "New commits available on {branch}": "New commits available on {branch}",
+  "Check installed images directly in their Docker registries.": "Check installed images directly in their Docker registries.",
+  "Update source": "Update source",
+  "Docker registry": "Docker registry",
+  "Shows newer stable x.y.z tags and new builds of your configured tags. Pinned digests stay pinned. Other tag formats are checked for new builds only.": "Shows newer stable x.y.z tags and new builds of your configured tags. Pinned digests stay pinned. Other tag formats are checked for new builds only.",
+  "Registry versions are for review. To install a different tag, use app settings; App Store updates remain available in the source menu.": "Registry versions are for review. To install a different tag, use app settings; App Store updates remain available in the source menu.",
+  "Configured image": "Configured image",
+  "Registry image": "Registry image",
+  "Installed image ID": "Installed image ID",
+  "Registry image ID": "Registry image ID",
+  "Registry update available": "Registry update available",
+  "Pinned to an exact image": "Pinned to an exact image",
+  "Registry version unknown": "Registry version unknown",
+  "Docker registry checks require a newer CasaOS app-management service. App Store checks are still available in the source menu.": "Docker registry checks require a newer CasaOS app-management service. App Store checks are still available in the source menu."
 }

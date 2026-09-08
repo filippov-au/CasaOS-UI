@@ -7,16 +7,18 @@ vi.mock('@/service/updates', () => ({ default: { list: vi.fn(), check: vi.fn(), 
 vi.mock('@/mixins/base/common-i18n', () => ({ ice_i18n: title => title.en_us }))
 
 const app = overrides => ({ id: 'demo', title: { en_us: 'Demo app' }, icon: '', current_version: '1.0', target_version: '2.0', check_status: 'available', operation: 'idle', rollback_available: true, rollback_version: '0.9', rollback_date: '2026-09-06T00:00:00Z', ...overrides })
-const response = apps => ({ data: { data: apps } })
+const response = apps => ({ data: { data: apps, registry_supported: true } })
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve() }
 const wrappers = []
-function render() {
+function render(source = 'store') {
   const wrapper = mount(AppUpdates, {
+    data: () => ({ source }),
     mocks: { $t: key => key },
     stubs: {
       'b-button': { props: ['disabled', 'loading'], template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>' },
       'b-message': { template: '<div><slot /></div>' },
       'b-modal': { props: ['active'], template: '<div v-if="active"><slot /></div>' },
+      'b-select': { props: ['value', 'disabled'], template: '<select :value="value" :disabled="disabled" @change="$emit(\'input\', $event.target.value)"><slot /></select>' },
     },
   })
   wrappers.push(wrapper)
@@ -34,6 +36,44 @@ beforeEach(() => {
 afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.destroy()); vi.useRealTimers() })
 
 describe('App Store Updates', () => {
+  it('explains missing registry support while keeping legacy store checks usable', async () => {
+    updates.list.mockResolvedValue({ data: { data: [app()] } })
+    const wrapper = render('registry'); await flush()
+    expect(wrapper.text()).toContain('Docker registry checks require a newer')
+    expect(updates.check).not.toHaveBeenCalled()
+    await wrapper.find('select').setValue('store'); await flush()
+    expect(updates.check).toHaveBeenCalledWith('store')
+  })
+  it('checks registries independently and displays configured and offered images without a store install action', async () => {
+    const registryApp = app({ registry_checked_at: '2026-09-08T00:00:00Z', registry_images: [
+      { service: 'web', image: 'example/demo:1.0.0', status: 'available', latest_image: 'example/demo:2.0.0', current_image_id: 'sha256:' + 'a'.repeat(64), latest_image_id: 'sha256:' + 'b'.repeat(64) },
+      { service: 'db', image: 'postgres@sha256:abc', status: 'pinned' },
+    ] })
+    updates.list.mockResolvedValue(response([registryApp])); updates.check.mockResolvedValue(response([registryApp]))
+    const wrapper = render('registry'); await flush()
+    expect(updates.check).toHaveBeenCalledWith('registry')
+    expect(wrapper.text()).toContain('Configured image: example/demo:1.0.0')
+    expect(wrapper.text()).toContain('Registry image: example/demo:2.0.0')
+    expect(wrapper.text()).toContain('Registry update available')
+    expect(wrapper.text()).toContain('Pinned to an exact image')
+    expect(wrapper.text()).not.toContain('Store version')
+    expect(wrapper.findAll('.update-actions button').wrappers.map(w => w.text())).toEqual(['Revert to previous version'])
+    await wrapper.find('select').setValue('store'); await flush()
+    expect(updates.check).toHaveBeenLastCalledWith('store')
+    expect(wrapper.text()).toContain('Store version: 2.0')
+  })
+  it('shows per-image failures without hiding successful registry checks', async () => {
+    const registryApp = app({ check_status: 'unmanaged', registry_checked_at: '2026-09-08T00:00:00Z', registry_images: [
+      { service: 'web', image: 'example/demo:latest', status: 'up_to_date' },
+      { service: 'db', image: 'example/db:latest', status: 'failed', error: 'Registry rate limit reached' },
+    ] })
+    updates.list.mockResolvedValue(response([registryApp])); updates.check.mockResolvedValue(response([registryApp]))
+    const wrapper = render('registry'); await flush()
+    expect(wrapper.text()).toContain('Up to date')
+    expect(wrapper.text()).toContain('Check failed')
+    expect(wrapper.text()).toContain('Registry rate limit reached')
+    expect(wrapper.text()).not.toContain('No matching store app')
+  })
   it('checks on opening and displays versions with a rollback action', async () => {
     const wrapper = render(); await flush()
     expect(updates.check).toHaveBeenCalledOnce()

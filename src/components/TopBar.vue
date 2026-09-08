@@ -6,6 +6,7 @@ import { mixin } from '@/mixins/mixin'
 import messages from '@/assets/lang'
 
 import events from '@/events/events'
+import { systemUpdateStatus, systemUpdateLabels } from '@/service/system-update-status'
 
 const systemConfigName = 'system'
 
@@ -43,9 +44,8 @@ export default {
         version: Object,
       },
       updateCheckError: '',
-      isUpdating: false,
-      latestText: 'Currently at the latest version',
-      updateText: 'A new version is available!',
+      updateChecked: false,
+      updateChecking: false,
 
       port: '',
       autoUsbMount: false,
@@ -71,6 +71,14 @@ export default {
     }
   },
   computed: {
+    updateStatus() {
+      return systemUpdateStatus(this.updateInfo, this.updateCheckError, this.updateChecked)
+    },
+    updateAvailable() { return this.updateStatus === 'available' },
+    updateStatusText() {
+      if (this.updateAvailable && this.updateInfo.source) return this.$t('New commits available on {branch}', { branch: this.updateInfo.source.branch })
+      return this.$t(systemUpdateLabels[this.updateStatus])
+    },
     sidebarIcon() {
       return this.$store.state.sidebarOpen ? 'close-outline' : 'menu-outline'
     },
@@ -313,18 +321,23 @@ export default {
      * @description: Get Version info
      * @return {*} void
      */
-    checkVersion() {
-      this.$api.sys.getVersion().then((res) => {
-        if (res.data.success === 200) {
-          this.updateInfo = res.data.data
-          this.updateCheckError = res.data.data.check_error || ''
-          if (res.data.data.need_update) {
-            this.$messageBus('dashboardsetting_versionavailable_show', true.toString())
-          }
-        }
-      }).catch(() => {
+    async checkVersion() {
+      if (this.updateChecking) return
+      this.updateChecking = true
+      try {
+        const res = await this.$api.sys.getVersion()
+        if (this._isDestroyed) return
+        if (res.data.success !== 200 || !res.data.data) throw new Error('Version check failed')
+        this.updateInfo = res.data.data
+        this.updateCheckError = this.updateInfo.check_error || this.updateInfo.source?.check_error || ''
+        this.updateChecked = true
+        if (this.updateAvailable) this.$messageBus('dashboardsetting_versionavailable_show', true.toString())
+      } catch {
+        if (this._isDestroyed) return
         this.updateCheckError = this.$t('Unable to check for updates')
-      })
+      } finally {
+        this.updateChecking = false
+      }
     },
 
     /**
@@ -512,7 +525,7 @@ export default {
           >
             <p role="button">
               <b-icon
-                :class="{ 'update-icon-dot': updateInfo.need_update }"
+                :class="{ 'update-icon-dot': updateAvailable }"
                 class="picon"
                 icon="control-outline"
                 pack="casa"
@@ -735,26 +748,19 @@ export default {
             <div class="is-flex is-align-items-center">
               <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
                 <b-icon class="mr-1 ml-2" icon="update-outline" pack="casa" size="is-20" />
-                <div :class="{ 'update-text-dot': updateInfo.need_update }">
-                  {{ $t("Update") }}
+                <div :class="{ 'update-text-dot': updateAvailable }">
+                  {{ $t("System updates") }}
                 </div>
               </div>
-              <div class="_has-text-gray">
+              <div v-if="updateChecked" class="_has-text-gray" :title="$t('Installed version')">
                 v{{ updateInfo.current_version }}
-                <span v-if="updateInfo.source"> · {{ updateInfo.source.branch }}</span>
               </div>
             </div>
 
             <div class="is-flex is-align-items-center update-container pl-5">
-              <div v-if="updateCheckError" class="has-text-danger is-size-7 is-flex-grow-1" role="status">
-                {{ $t('Unable to check for updates') }}
-              </div>
-              <div v-else-if="!updateInfo.need_update" class="is-flex is-align-items-center is-flex-grow-1 is-size-7">
-                {{ $t(latestText) }}
-                <b-icon class="ml-1" custom-size="mdi-18px" icon="check" type="is-success" />
-              </div>
-              <div v-else class="is-flex-grow-1 is-size-7">
-                {{ $t(updateText) }}
+              <div class="is-flex-grow-1 is-size-7" :class="{ 'has-text-danger': updateStatus === 'failed' }" role="status">
+                {{ updateStatusText }}
+                <b-icon v-if="updateStatus === 'current'" class="ml-1" custom-size="mdi-18px" icon="check" type="is-success" />
               </div>
               <b-button class="ml-2" rounded size="is-small" type="is-dark" @click="showUpdates">
                 {{ $t('View updates') }}
