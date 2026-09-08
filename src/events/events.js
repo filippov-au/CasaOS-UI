@@ -11,11 +11,9 @@
 const events = {
 	// Event: 'eventName',
 	SHOW_CHANGE_WALLPAPER_MODAL: 'showChangeWallpaperModal',
-	OPEN_APP_STORE_AND_GOTO_SYNCTHING: 'openAppStoreAndGotoSyncing',
 	RELOAD_FILE_LIST: 'reloadFileList',
 	SHOW_HOME_CONTEXT_MENU: 'showHomeContextMenu',
 	RELOAD_APP_LIST: 'reloadAppList',
-	UPDATE_SYNC_STATUS: 'updateSyncStatus',
 	UN_SHARE: 'unShare',
 	GOTO: 'goto',
 	SELECT_SHARE: 'selectShare',

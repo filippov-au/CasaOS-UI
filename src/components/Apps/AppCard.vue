@@ -278,11 +278,7 @@ export default {
         })
       }
       else if (this.isV2App) {
-        this.$openAPI.appManagement.compose.uninstallComposeApp(this.item.name, checkDelConfig).then((res) => {
-          if (res.status === 200) {
-            this.$EventBus.$emit(events.UPDATE_SYNC_STATUS)
-          }
-        }).catch((err) => {
+        this.$openAPI.appManagement.compose.uninstallComposeApp(this.item.name, checkDelConfig).catch((err) => {
           this.$buefy.toast.open({
             message: err.response.data.data,
             type: 'is-danger',
@@ -293,11 +289,7 @@ export default {
       }
       else {
         // former app uninstall
-        this.$api.container.uninstall(this.item.name, { delete_config_folder: checkDelConfig }).then((res) => {
-          if (res.data.success === 200) {
-            this.$EventBus.$emit(events.UPDATE_SYNC_STATUS)
-          }
-        }).catch((err) => {
+        this.$api.container.uninstall(this.item.name, { delete_config_folder: checkDelConfig }).catch((err) => {
           this.$buefy.toast.open({
             message: err.response.data.data,
             type: 'is-danger',
@@ -315,7 +307,6 @@ export default {
     updateState() {
       this.$refs.dro.isActive = false
       this.$emit('updateState')
-      this.$EventBus.$emit(events.UPDATE_SYNC_STATUS)
     },
 
     async openTips(name) {

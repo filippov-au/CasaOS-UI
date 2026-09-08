@@ -109,8 +109,6 @@ import isEqual from 'lodash/isEqual'
 import { ice_i18n } from '@/mixins/base/common-i18n'
 import YAML from 'yamljs'
 
-const SYNCTHING_STORE_ID = 74
-
 // meta_data :: build-in app
 const builtInApplications = [
 	{
@@ -187,10 +185,6 @@ export default {
 	created () {
 		this.getList()
 		this.draggable = this.isMobile() ? '' : '.handle'
-		this.$EventBus.$on(events.OPEN_APP_STORE_AND_GOTO_SYNCTHING, () => {
-			this.showInstall(SYNCTHING_STORE_ID)
-		})
-
 		this.$EventBus.$on(events.RELOAD_APP_LIST, () => {
 			this.getList()
 		})
@@ -200,7 +194,6 @@ export default {
 		}, 5000)
 	},
 	beforeDestroy () {
-		this.$EventBus.$off(events.OPEN_APP_STORE_AND_GOTO_SYNCTHING)
 		window.removeEventListener('resize', this.getSkCount)
 
 		clearInterval(this.ListRefreshTimer)

@@ -3,7 +3,6 @@ import { Swiper, SwiperSlide } from 'vue-awesome-swiper'
 import sortBy from 'lodash/sortBy'
 import noticeBlock from '@/components/noticBlock/noticeBlock'
 import { mixin } from '@/mixins/mixin'
-import SyncBlock from '@/components/syncthing/SyncBlock.vue'
 import SmartBlock from '@/components/smartHome/SmartBlock.vue'
 import events from '@/events/events'
 import Business_ShowNewAppTag from '@/mixins/app/Business_ShowNewAppTag'
@@ -12,7 +11,7 @@ import { ice_i18n } from '@/mixins/base/common-i18n'
 
 export default {
   name: 'CoreService',
-  components: { SmartBlock, SyncBlock, NoticeBlock: noticeBlock, Swiper, SwiperSlide },
+  components: { SmartBlock, NoticeBlock: noticeBlock, Swiper, SwiperSlide },
   mixins: [mixin, Business_ShowNewAppTag],
   inject: ['homeShowFiles'],
   data() {
@@ -567,9 +566,6 @@ export default {
   <Swiper ref="mySwiper" :options="swiperOptions">
     <SwiperSlide v-for="(noticeCard, key) in noticesData" :key="key" :class="{ _singleWidth: showFullCard }">
       <NoticeBlock :notice-data="noticeCard" :notice-type="key" @delete-notice="refreshNotice" />
-    </SwiperSlide>
-    <SwiperSlide v-if="recommendShow">
-      <SyncBlock />
     </SwiperSlide>
     <SwiperSlide v-if="recommendShow">
       <SmartBlock />
