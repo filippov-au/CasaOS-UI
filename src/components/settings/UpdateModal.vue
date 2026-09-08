@@ -33,6 +33,8 @@ import {marked} from 'marked'
 
 export default {
 	props: {
+        sourceMode: { type: Boolean, default: false },
+        sourceRunning: { type: Boolean, default: false },
 		changeLog: {
 			type: String,
 			default: ""
@@ -47,6 +49,16 @@ export default {
 			updateLogs: ``
 		};
 	},
+	mounted() {
+        if (this.sourceRunning) {
+            this.isUpdating = true;
+            this.getUpdateLogs();
+        }
+    },
+    beforeDestroy() {
+        clearInterval(this.timer);
+        clearInterval(this.updateTimer);
+    },
 	computed: {
 		markdownToHtml() {
 			return marked.parse(this.changeLog);
@@ -62,43 +74,54 @@ export default {
 		 * @return {*} void
 		 */
 		async updateSystem() {
-			this.isUpdating = true;
-			await this.$api.sys.updateCasaOS();
-			// this.checkUpdateState();
-			this.getUpdateLogs()
-		},
+            if (this.isUpdating) return;
+            this.isUpdating = true;
+            try {
+                await this.$api.sys.updateCasaOS();
+                this.getUpdateLogs();
+            } catch (error) {
+                this.isUpdating = false;
+                this.$buefy.toast.open({
+                    message: error?.response?.data?.message || this.$t('Unable to start update'),
+                    type: 'is-danger',
+                });
+            }
+        },
 
 		/**
 		 * @description: Get update logs
 		 * @return {*} void
 		 */
 		getUpdateLogs() {
-			this.updateTimer = setInterval(() => {
-				this.$api.file.getContent(`/var/log/casaos/upgrade.log`).then(res => {
+            clearInterval(this.updateTimer);
+            const poll = async () => {
+                try {
+                    const res = await this.$api.file.getContent('/var/log/casaos/upgrade.log');
+                    if (this._isDestroyed) return;
+                    this.updateLogs = res.data.data || '';
+                    // Match final status lines, not arbitrary compiler or test output.
+                    const finalLine = this.updateLogs.trim().split('\n').pop();
+                    if (this.sourceMode ? finalLine === 'CasaOS upgrade successfully' : this.updateLogs.includes('CasaOS upgrade successfully')) {
+                        clearInterval(this.updateTimer);
+                        localStorage.setItem('is_update', 'true');
+                        this.$router.replace({ path: '/logout' });
+                    } else if (this.sourceMode ? finalLine === 'CasaOS upgrade failed' : this.updateLogs.includes('CasaOS upgrade failed')) {
+                        clearInterval(this.updateTimer);
+                        this.isUpdating = false;
+                        this.$buefy.toast.open({
+                            message: this.$t('There seems to be a problem with the upgrade process, please try again!'),
+                            type: 'is-danger',
+                        });
+                    }
+                } catch (error) {
+                    // CasaOS briefly disappears while the independent updater restarts it.
+                    // Keep polling so the same dialog reconnects and shows the final result.
+                }
+            };
+            this.updateTimer = setInterval(poll, 2000);
+            poll();
+        },
 
-					this.updateLogs = res.data.data;
-					if (this.updateLogs.includes(`CasaOS upgrade successfully`)) {
-						localStorage.setItem('is_update', 'true')
-						clearInterval(this.updateTimer);
-						setTimeout(() => {
-							this.$router.replace({
-								path: '/logout'
-							})
-						}, 1000);
-					} else if (this.updateLogs.includes(`CasaOS upgrade failed`)) {
-						this.$buefy.toast.open({
-							message: this.$t(`There seems to be a problem with the upgrade process, please try again!`),
-							type: 'is-danger'
-						})
-						clearInterval(this.updateTimer);
-						setTimeout(() => {
-							this.isUpdating = false;
-						}, 1000);
-
-					}
-				})
-			}, 200);
-		},
 		/**
 		 * @description: check update state if is_need is false then reload page
 		 * @return {*} void

@@ -43,6 +43,7 @@ export default {
         need_update: false,
         version: Object,
       },
+      updateCheckError: '',
       isUpdating: false,
       latestText: 'Currently at the latest version',
       updateText: 'A new version is available!',
@@ -142,9 +143,14 @@ export default {
   },
   mounted() {
     this.checkVersion()
+    this.timer = setInterval(() => this.checkVersion(), 300000)
     this.getUserInfo()
     this.getUsbStatus()
     this.getHardwareInfo()
+  },
+
+  beforeDestroy() {
+    clearInterval(this.timer)
   },
 
   methods: {
@@ -312,10 +318,13 @@ export default {
       this.$api.sys.getVersion().then((res) => {
         if (res.data.success === 200) {
           this.updateInfo = res.data.data
+          this.updateCheckError = res.data.data.check_error || ''
           if (res.data.data.need_update) {
             this.$messageBus('dashboardsetting_versionavailable_show', true.toString())
           }
         }
+      }).catch(() => {
+        this.updateCheckError = this.$t('Unable to check for updates')
       })
     },
 
@@ -335,6 +344,8 @@ export default {
         animation: 'zoom-in',
         props: {
           changeLog: this.updateInfo.version.change_log,
+          sourceRunning: this.updateInfo.source?.operation === 'running',
+          sourceMode: Boolean(this.updateInfo.source),
         },
       })
     },
@@ -745,10 +756,14 @@ export default {
               </div>
               <div class="_has-text-gray">
                 v{{ updateInfo.current_version }}
+                <span v-if="updateInfo.source"> · {{ updateInfo.source.branch }}</span>
               </div>
             </div>
 
-            <div v-if="!updateInfo.need_update" class="is-flex is-align-items-center pl-55 ml-1 is-size-7">
+            <div v-if="updateCheckError" class="has-text-danger is-size-7 pl-5" role="status">
+              {{ $t('Unable to check for updates') }}
+            </div>
+            <div v-else-if="!updateInfo.need_update" class="is-flex is-align-items-center pl-55 ml-1 is-size-7">
               {{ $t(latestText) }}
               <b-icon class="ml-1" custom-size="mdi-18px" icon="check" type="is-success" />
             </div>
