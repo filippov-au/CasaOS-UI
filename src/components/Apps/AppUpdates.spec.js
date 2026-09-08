@@ -5,130 +5,121 @@ import updates from '@/service/updates'
 
 vi.mock('@/service/updates', () => ({ default: { list: vi.fn(), check: vi.fn(), update: vi.fn(), rollback: vi.fn() } }))
 vi.mock('@/mixins/base/common-i18n', () => ({ ice_i18n: title => title.en_us }))
-
-const app = overrides => ({ id: 'demo', title: { en_us: 'Demo app' }, icon: '', current_version: '1.0', target_version: '2.0', check_status: 'available', operation: 'idle', rollback_available: true, rollback_version: '0.9', rollback_date: '2026-09-06T00:00:00Z', ...overrides })
-const response = apps => ({ data: { data: apps, registry_supported: true } })
+const app = overrides => ({ id: 'audiobookshelf', title: { en_us: 'Audiobookshelf' }, icon: '', current_version: '2.23.0', target_version: '2.36.0', check_status: 'available', operation: 'idle', update_ready: true, update_token: 'checked-2.36.0', rollback_available: true, rollback_version: '2.22.0', rollback_date: '2026-09-06T00:00:00Z', ...overrides })
+const response = apps => ({ data: { data: apps, combined_updates_supported: true } })
 const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve() }
 const wrappers = []
-function render(source = 'store') {
+function render() {
   const wrapper = mount(AppUpdates, {
-    data: () => ({ source }),
-    mocks: { $t: key => key },
-    stubs: {
-      'b-button': { props: ['disabled', 'loading'], template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>' },
-      'b-message': { template: '<div><slot /></div>' },
-      'b-modal': { props: ['active'], template: '<div v-if="active"><slot /></div>' },
-      'b-select': { props: ['value', 'disabled'], template: '<select :value="value" :disabled="disabled" @change="$emit(\'input\', $event.target.value)"><slot /></select>' },
-    },
+    mocks: { $t: (key, values = {}) => key.replace(/\{(\w+)\}/g, (_, name) => values[name] ?? name) },
+    stubs: { 'b-modal': { props: ['active'], template: '<div v-if="active"><slot /></div>' } },
   })
   wrappers.push(wrapper)
   return wrapper
 }
-
 beforeEach(() => {
-  vi.useFakeTimers()
-  vi.clearAllMocks()
+  vi.useFakeTimers(); vi.clearAllMocks()
   updates.list.mockResolvedValue(response([app()]))
   updates.check.mockResolvedValue(response([app()]))
-  updates.update.mockResolvedValue({})
-  updates.rollback.mockResolvedValue({})
+  updates.update.mockResolvedValue({}); updates.rollback.mockResolvedValue({})
 })
-afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.destroy()); vi.useRealTimers() })
+afterEach(() => { wrappers.splice(0).forEach(w => w.destroy()); vi.useRealTimers() })
 
-describe('App Store Updates', () => {
-  it('explains missing registry support while keeping legacy store checks usable', async () => {
-    updates.list.mockResolvedValue({ data: { data: [app()] } })
-    const wrapper = render('registry'); await flush()
-    expect(wrapper.text()).toContain('Docker registry checks require a newer')
-    expect(updates.check).not.toHaveBeenCalled()
-    await wrapper.find('select').setValue('store'); await flush()
-    expect(updates.check).toHaveBeenCalledWith('store')
-  })
-  it('checks registries independently and displays configured and offered images without a store install action', async () => {
-    const registryApp = app({ registry_checked_at: '2026-09-08T00:00:00Z', registry_images: [
-      { service: 'web', image: 'example/demo:1.0.0', status: 'available', latest_image: 'example/demo:2.0.0', current_image_id: 'sha256:' + 'a'.repeat(64), latest_image_id: 'sha256:' + 'b'.repeat(64) },
-      { service: 'db', image: 'postgres@sha256:abc', status: 'pinned' },
-    ] })
-    updates.list.mockResolvedValue(response([registryApp])); updates.check.mockResolvedValue(response([registryApp]))
-    const wrapper = render('registry'); await flush()
-    expect(updates.check).toHaveBeenCalledWith('registry')
-    expect(wrapper.text()).toContain('Configured image: example/demo:1.0.0')
-    expect(wrapper.text()).toContain('Registry image: example/demo:2.0.0')
-    expect(wrapper.text()).toContain('Registry update available')
-    expect(wrapper.text()).toContain('Pinned to an exact image')
-    expect(wrapper.text()).not.toContain('Store version')
-    expect(wrapper.findAll('.update-actions button').wrappers.map(w => w.text())).toEqual(['Revert to previous version'])
-    await wrapper.find('select').setValue('store'); await flush()
-    expect(updates.check).toHaveBeenLastCalledWith('store')
-    expect(wrapper.text()).toContain('Store version: 2.0')
-  })
-  it('shows per-image failures without hiding successful registry checks', async () => {
-    const registryApp = app({ check_status: 'unmanaged', registry_checked_at: '2026-09-08T00:00:00Z', registry_images: [
-      { service: 'web', image: 'example/demo:latest', status: 'up_to_date' },
-      { service: 'db', image: 'example/db:latest', status: 'failed', error: 'Registry rate limit reached' },
-    ] })
-    updates.list.mockResolvedValue(response([registryApp])); updates.check.mockResolvedValue(response([registryApp]))
-    const wrapper = render('registry'); await flush()
-    expect(wrapper.text()).toContain('Up to date')
-    expect(wrapper.text()).toContain('Check failed')
-    expect(wrapper.text()).toContain('Registry rate limit reached')
-    expect(wrapper.text()).not.toContain('No matching store app')
-  })
-  it('checks on opening and displays versions with a rollback action', async () => {
+describe('Unified app updates', () => {
+  it('shows an Update button for the newer registry version without a source selector', async () => {
     const wrapper = render(); await flush()
-    expect(updates.check).toHaveBeenCalledOnce()
-    expect(wrapper.text()).toContain('Demo app')
-    expect(wrapper.text()).toContain('Installed: 1.0')
-    expect(wrapper.text()).toContain('Store version: 2.0')
-    expect(wrapper.text()).toContain('Revert to previous version')
+    expect(updates.check).toHaveBeenCalledWith()
+    expect(wrapper.find('select').exists()).toBe(false)
+    expect(wrapper.find('.app-row').text()).toContain('Audiobookshelf')
+    expect(wrapper.find('.app-row').text()).toContain('2.23.0')
+    expect(wrapper.find('.app-row').text()).toContain('2.36.0')
+    expect(wrapper.find('.update-actions button').text()).toBe('Update')
+    expect(wrapper.find('.update-actions button').attributes('disabled')).toBeUndefined()
+    expect(wrapper.text()).toContain('1 update available')
+    await wrapper.find('.update-actions button').trigger('click')
+    expect(wrapper.find('.confirmation-version').text()).toContain('2.36.0')
+    await wrapper.find('.confirm-button').trigger('click'); await flush()
+    expect(updates.update).toHaveBeenCalledWith('audiobookshelf', 'checked-2.36.0')
   })
-  it('explains unavailable support on older backends without checking', async () => {
-    updates.list.mockRejectedValue({ response: { status: 404 } })
+  it('keeps technical image references under closed details and hides image hashes', async () => {
+    const item = app({ registry_images: [{ service: 'main', installed_image: 'ghcr.io/advplyr/audiobookshelf:2.23.0', latest_image: 'ghcr.io/advplyr/audiobookshelf:2.36.0', current_image_id: 'sha256:abc', latest_image_id: 'sha256:def' }] })
+    updates.list.mockResolvedValue(response([item])); updates.check.mockResolvedValue(response([item]))
+    const wrapper = render(); await flush()
+    expect(wrapper.find('details').attributes('open')).toBeUndefined()
+    expect(wrapper.find('.app-row').text()).not.toContain('ghcr.io')
+    expect(wrapper.find('details').text()).toContain('ghcr.io/advplyr/audiobookshelf:2.36.0')
+    expect(wrapper.text()).not.toContain('sha256:')
+  })
+  it('groups available apps, errors and current apps with clear states', async () => {
+    const apps = [app(), app({ id: 'broken', title: { en_us: 'Broken' }, check_status: 'failed', update_ready: false, check_error: 'Registry unavailable' }), app({ id: 'current', title: { en_us: 'Current' }, check_status: 'up_to_date', update_ready: false })]
+    updates.list.mockResolvedValue(response(apps)); updates.check.mockResolvedValue(response(apps))
+    const wrapper = render(); await flush()
+    expect(wrapper.findAll('.group-header h3').wrappers.map(w => w.text())).toEqual(['Available updates', 'Needs attention', 'Installed apps'])
+    expect(wrapper.find('[data-app-id="broken"]').text()).toContain('Registry unavailable')
+    expect(wrapper.find('[data-app-id="broken"] .update-button').exists()).toBe(false)
+    expect(wrapper.find('[data-app-id="current"] .current-mark').exists()).toBe(true)
+  })
+  it('uses a new-build label when the image changes under the same tag', async () => {
+    const item = app({ current_version: 'latest', target_version: 'latest' })
+    updates.list.mockResolvedValue(response([item])); updates.check.mockResolvedValue(response([item]))
+    const wrapper = render(); await flush()
+    expect(wrapper.find('.app-version').text()).toContain('New update available')
+    expect(wrapper.find('.update-button').exists()).toBe(true)
+  })
+  it('explains older backend support without offering an unsupported registry update', async () => {
+    updates.list.mockResolvedValue({ data: { data: [app({ update_ready: false })], registry_supported: true } })
     const wrapper = render(); await flush()
     expect(wrapper.text()).toContain('require a newer CasaOS app-management service')
     expect(updates.check).not.toHaveBeenCalled()
+    expect(wrapper.find('.update-actions button').exists()).toBe(false)
   })
-  it('distinguishes an empty list and failed checks', async () => {
+  it('shows endpoint failure and empty states separately', async () => {
+    updates.list.mockRejectedValue({ response: { status: 404 } })
+    let wrapper = render(); await flush()
+    expect(wrapper.text()).toContain('require a newer CasaOS app-management service')
+    wrapper.destroy()
     updates.list.mockResolvedValue(response([])); updates.check.mockResolvedValue(response([]))
-    const wrapper = render(); await flush()
+    wrapper = render(); await flush()
     expect(wrapper.text()).toContain('No installed apps')
-    updates.list.mockResolvedValue(response([app({ check_status: 'failed', check_error: 'Registry unavailable' })]))
-    await wrapper.vm.refresh(false); await flush()
-    expect(wrapper.text()).toContain('Check failed')
-    expect(wrapper.text()).toContain('Registry unavailable')
-    expect(wrapper.find('.update-actions').text()).not.toContain('Update')
+    expect(wrapper.text()).not.toContain('All apps are up to date')
   })
-  it('confirms version-only recovery and submits only one request', async () => {
+  it('prevents duplicate submissions and preserves the reviewed token during polling', async () => {
     const wrapper = render(); await flush()
-    wrapper.vm.confirm(wrapper.vm.apps[0], true); await wrapper.vm.$nextTick()
-    expect(wrapper.text()).toContain('cannot undo database changes')
+    wrapper.vm.confirm(wrapper.vm.apps[0], false)
+    updates.list.mockResolvedValue(response([app({ target_version: '2.37.0', update_token: 'new-token' })]))
+    await wrapper.vm.refresh(false)
     let finish
-    updates.rollback.mockImplementation(() => new Promise(resolve => { finish = resolve }))
+    updates.update.mockImplementation(() => new Promise(resolve => { finish = resolve }))
     const first = wrapper.vm.submit(); await wrapper.vm.submit()
-    expect(updates.rollback).toHaveBeenCalledOnce()
-    expect(updates.rollback).toHaveBeenCalledWith('demo')
+    expect(updates.update).toHaveBeenCalledOnce()
+    expect(updates.update).toHaveBeenCalledWith('audiobookshelf', 'checked-2.36.0')
     finish({}); await first
   })
-  it('disables conflicting actions and shows errors from an operation', async () => {
-    const running = app({ operation: 'applying' })
-    updates.list.mockResolvedValue(response([running])); updates.check.mockResolvedValue(response([running]))
+  it('keeps stale-plan and other action errors visible in the confirmation', async () => {
     const wrapper = render(); await flush()
-    expect(wrapper.findAll('.update-actions button').wrappers.every(button => button.attributes('disabled') !== undefined)).toBe(true)
-    expect(wrapper.find('progress').exists()).toBe(true)
-    updates.list.mockResolvedValue(response([app({ operation: 'failed', error: 'Health check failed' })]))
-    await wrapper.vm.refresh(false)
-    expect(wrapper.text()).toContain('Health check failed')
-  })
-  it('keeps action errors visible and prevents polling after closing', async () => {
-    const wrapper = render(); await flush()
-    updates.update.mockRejectedValue({ response: { status: 409, data: { message: 'Another operation is running' } } })
-    wrapper.vm.confirm(wrapper.vm.apps[0], false)
-    await wrapper.vm.submit()
-    expect(wrapper.text()).toContain('Another operation is running')
+    updates.update.mockRejectedValue({ response: { status: 409, data: { message: 'Check for updates again' } } })
+    wrapper.vm.confirm(wrapper.vm.apps[0], false); await wrapper.vm.submit()
     expect(wrapper.vm.confirmOpen).toBe(true)
+    expect(wrapper.find('[role="alert"]').text()).toContain('Check for updates again')
+  })
+  it('keeps restore in Details with a data-preservation confirmation', async () => {
+    const wrapper = render(); await flush()
+    await wrapper.find('.restore-row button').trigger('click')
+    expect(wrapper.text()).toContain('cannot undo database changes')
+    expect(wrapper.find('.confirmation-version').text()).toContain('2.22.0')
+    await wrapper.find('.confirm-button').trigger('click'); await flush()
+    expect(updates.rollback).toHaveBeenCalledWith('audiobookshelf')
+  })
+  it('disables conflicting actions while updating and stops polling on close', async () => {
+    const item = app({ operation: 'applying' })
+    updates.list.mockResolvedValue(response([item])); updates.check.mockResolvedValue(response([item]))
+    const wrapper = render(); await flush()
+    expect(wrapper.find('.update-actions button').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('progress').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Starting updated app')
     wrapper.destroy()
     const count = updates.list.mock.calls.length
-    await vi.advanceTimersByTimeAsync(10000)
+    await vi.advanceTimersByTimeAsync(30000)
     expect(updates.list).toHaveBeenCalledTimes(count)
   })
 })

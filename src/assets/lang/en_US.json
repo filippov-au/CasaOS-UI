@@ -475,5 +475,22 @@
   "Registry update available": "Registry update available",
   "Pinned to an exact image": "Pinned to an exact image",
   "Registry version unknown": "Registry version unknown",
-  "Docker registry checks require a newer CasaOS app-management service. App Store checks are still available in the source menu.": "Docker registry checks require a newer CasaOS app-management service. App Store checks are still available in the source menu."
+  "Docker registry checks require a newer CasaOS app-management service. App Store checks are still available in the source menu.": "Docker registry checks require a newer CasaOS app-management service. App Store checks are still available in the source menu.",
+  "All apps are up to date": "All apps are up to date",
+  "App updates": "App updates",
+  "Available updates": "Available updates",
+  "Details": "Details",
+  "Includes the latest app store defaults and newer image versions. Your settings and data are kept.": "Includes the latest app store defaults and newer image versions. Your settings and data are kept.",
+  "Installed apps": "Installed apps",
+  "Keep your apps up to date.": "Keep your apps up to date.",
+  "Looking for updates\u2026": "Looking for updates\u2026",
+  "Needs attention": "Needs attention",
+  "New update available": "New update available",
+  "Restore": "Restore",
+  "Starting": "Starting",
+  "Updating your apps\u2026": "Updating your apps\u2026",
+  "Your apps": "Your apps",
+  "Your installed apps will appear here.": "Your installed apps will appear here.",
+  "{count} updates available": "{count} updates available",
+  "1 update available": "1 update available"
 }

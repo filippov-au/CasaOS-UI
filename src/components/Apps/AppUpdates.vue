@@ -1,96 +1,111 @@
 <template>
-  <div class="app-updates" aria-live="polite">
-    <div class="updates-toolbar">
+  <section class="app-updates" :aria-label="$t('App updates')">
+    <header class="updates-header">
       <div>
-        <h3 class="title is-5 mb-2">{{ $t('Installed app updates') }}</h3>
-        <p class="is-size-7">{{ $t(source === 'registry' ? 'Check installed images directly in their Docker registries.' : 'Updates come from your configured app stores.') }}</p>
-        <p v-if="lastChecked" class="is-size-7 mt-1">{{ $t('Last checked') }}: {{ formatDate(lastChecked) }}</p>
+        <h2>{{ $t('App updates') }}</h2>
+        <p>{{ $t('Keep your apps up to date.') }}</p>
       </div>
-      <b-select v-model="source" :disabled="fetching || submitting" :aria-label="$t('Update source')" @input="changeSource">
-        <option value="registry">{{ $t('Docker registry') }}</option>
-        <option value="store">{{ $t('App Store') }}</option>
-      </b-select>
-      <b-button :loading="checking" :disabled="loading || unavailable || fetching || (source === 'registry' && registryUnavailable)" type="is-primary" rounded @click="refresh(true)">
-        {{ $t('Check for updates') }}
-      </b-button>
-    </div>
-    <p v-if="source === 'registry'" class="is-size-7 mb-4">
-      {{ $t('Shows newer stable x.y.z tags and new builds of your configured tags. Pinned digests stay pinned. Other tag formats are checked for new builds only.') }}
-      {{ $t('Registry versions are for review. To install a different tag, use app settings; App Store updates remain available in the source menu.') }}
-    </p>
-    <b-message v-if="unavailable" type="is-info" :closable="false">
+      <button class="check-button" :disabled="fetching || unavailable || unsupported" :aria-busy="checking" @click="refresh(true)">
+        <span class="refresh-icon" :class="{ spinning: checking }" aria-hidden="true">↻</span>
+        {{ $t(checking ? 'Checking for updates' : 'Check for updates') }}
+      </button>
+    </header>
+
+    <div v-if="unavailable || unsupported" class="updates-notice" role="status">
       {{ $t('App updates require a newer CasaOS app-management service.') }}
-    </b-message>
-    <b-message v-else-if="source === 'registry' && registryUnavailable" type="is-info" :closable="false">
-      {{ $t('Docker registry checks require a newer CasaOS app-management service. App Store checks are still available in the source menu.') }}
-    </b-message>
-    <b-message v-else-if="error" type="is-danger" :closable="false">
-      {{ error }}
-      <b-button size="is-small" class="ml-2" @click="refresh(false)">{{ $t('Retry') }}</b-button>
-    </b-message>
-    <p v-if="loading">{{ $t('Loading') }}…</p>
-    <p v-else-if="!unavailable && !error && !apps.length" class="py-6 has-text-centered">{{ $t('No installed apps') }}</p>
-    <article v-for="app in sortedApps" :key="app.id" class="update-row">
-      <img v-if="app.icon" :src="app.icon" alt="" class="update-icon" @error="$event.target.style.visibility = 'hidden'">
-      <div class="update-details">
-        <h4 class="has-text-weight-semibold">{{ title(app) }}</h4>
-        <template v-if="source === 'registry'">
-          <p v-if="!app.registry_checked_at" class="is-size-7">{{ $t('Not checked yet') }}</p>
-          <div v-for="image in app.registry_images || []" :key="image.service" class="registry-image is-size-7">
-            <p class="has-text-weight-semibold">{{ image.service }}</p>
-            <p>{{ $t('Configured image') }}: <code>{{ image.image || $t('Unknown') }}</code></p>
-            <p :class="{ 'has-text-danger': image.status === 'failed', 'has-text-success': image.status === 'available' }">{{ registryLabel(image.status) }}</p>
-            <p v-if="image.latest_image">{{ $t('Registry image') }}: <code>{{ image.latest_image }}</code></p>
-            <p v-if="image.current_image_id" class="registry-digests">
-              {{ $t('Installed image ID') }}: <code :title="image.current_image_id">{{ shortImageID(image.current_image_id) }}</code>
-              <template v-if="image.latest_image_id"> → {{ $t('Registry image ID') }}: <code :title="image.latest_image_id">{{ shortImageID(image.latest_image_id) }}</code></template>
-            </p>
-            <p v-if="image.error" class="has-text-danger">{{ image.error }}</p>
+    </div>
+    <div v-else-if="error" class="updates-notice notice-error" role="alert">
+      <span>{{ error }}</span>
+      <button class="text-button" :disabled="fetching" @click="refresh(false)">{{ $t('Retry') }}</button>
+    </div>
+
+    <div class="updates-overview" aria-live="polite">
+      <span v-if="loading">{{ $t('Loading') }}…</span>
+      <template v-else>
+        <span class="overview-count">{{ overviewText }}</span>
+        <span v-if="lastChecked" class="last-checked">{{ $t('Last checked') }} {{ formatDate(lastChecked) }}</span>
+      </template>
+    </div>
+
+    <div v-if="!loading && !unavailable && !unsupported && !error && !apps.length" class="updates-empty">
+      <span class="empty-symbol" aria-hidden="true">↓</span>
+      <h3>{{ $t('No installed apps') }}</h3>
+      <p>{{ $t('Your installed apps will appear here.') }}</p>
+    </div>
+
+    <section v-for="group in groups" :key="group.id" class="update-group" :aria-label="$t(group.title)">
+      <header class="group-header">
+        <h3>{{ $t(group.title) }}</h3>
+        <span>{{ group.apps.length }}</span>
+      </header>
+      <article v-for="app in group.apps" :key="app.id" class="update-card" :data-app-id="app.id">
+        <div class="app-row">
+          <div class="app-icon" :class="{ 'icon-fallback': !app.icon || brokenIcons[app.id] }">
+            <img v-if="app.icon && !brokenIcons[app.id]" :src="app.icon" alt="" @error="$set(brokenIcons, app.id, true)">
+            <span v-else aria-hidden="true">{{ title(app).charAt(0).toUpperCase() }}</span>
           </div>
-        </template>
-        <template v-else>
-        <p class="is-size-7">
-          {{ $t('Installed') }}: {{ app.current_version || $t('Unknown') }}
-          <span v-if="app.target_version"> · {{ $t('Store version') }}: {{ app.target_version }}</span>
-        </p>
-        <p class="is-size-7 mt-1" :class="{ 'has-text-danger': app.check_status === 'failed' }">{{ checkLabel(app.check_status) }}</p>
-        <p v-if="app.check_error" class="is-size-7 has-text-danger">{{ app.check_error }}</p>
-        </template>
-        <p v-if="app.operation !== 'idle'" class="is-size-7 mt-1">{{ operationLabel(app.operation) }}</p>
-        <progress v-if="busy(app)" class="progress is-small is-primary mt-2" :aria-label="operationLabel(app.operation)" />
-        <p v-if="app.error" class="is-size-7 has-text-danger mt-1">{{ app.error }}</p>
-        <p v-if="app.rollback_version" class="is-size-7 mt-2">
-          {{ $t('Previous version') }}: {{ app.rollback_version }} · {{ formatDate(app.rollback_date) }}
-        </p>
-        <p v-if="app.rollback_reason" class="is-size-7 has-text-danger">{{ app.rollback_reason }}</p>
-      </div>
-      <div class="update-actions">
-        <b-button v-if="source === 'store' && app.check_status === 'available'" type="is-primary" :disabled="busy(app)" rounded @click="confirm(app, false)">
-          {{ $t('Update') }}
-        </b-button>
-        <b-button v-if="app.rollback_version" :disabled="busy(app) || !app.rollback_available" rounded @click="confirm(app, true)">
-          {{ $t('Revert to previous version') }}
-        </b-button>
-      </div>
-    </article>
+          <div class="app-summary">
+            <h4>{{ title(app) }}</h4>
+            <p v-if="busy(app)" class="app-version">{{ operationLabel(app.operation) }}</p>
+            <p v-else-if="ready(app) && app.target_version && app.current_version !== app.target_version" class="app-version">
+              <span>{{ app.current_version || $t('Unknown') }}</span>
+              <span class="version-arrow" aria-hidden="true">→</span>
+              <span class="new-version">{{ app.target_version }}</span>
+            </p>
+            <p v-else-if="ready(app)" class="app-version">{{ $t('New update available') }}<span v-if="app.current_version"> · {{ app.current_version }}</span></p>
+            <p v-else class="app-version">{{ app.current_version || $t('Unknown') }}<span v-if="app.check_status === 'up_to_date'"> · {{ $t('Up to date') }}</span></p>
+          </div>
+          <div class="update-actions">
+            <button v-if="ready(app) || busy(app)" class="update-button" :disabled="busy(app) || fetching || submitting || unsupported || unavailable" :aria-label="$t('Update') + ' ' + title(app)" :aria-busy="busy(app)" @click="confirm(app, false)">
+              <span v-if="busy(app)" class="button-spinner" aria-hidden="true" />
+              {{ $t(busy(app) ? 'Updating' : 'Update') }}
+            </button>
+            <span v-else-if="app.check_status === 'up_to_date'" class="current-mark" :aria-label="$t('Up to date')">✓</span>
+          </div>
+        </div>
+        <progress v-if="busy(app)" class="app-progress" :aria-label="operationLabel(app.operation)" />
+        <p v-if="app.check_error" class="app-error" role="status">{{ app.check_error }}</p>
+        <p v-if="app.error" class="app-error" role="status">{{ app.error }}</p>
+        <p v-if="!busy(app) && app.check_status === 'unchecked'" class="app-note">{{ $t('Not checked yet') }}</p>
+        <p v-if="!busy(app) && app.check_status === 'unmanaged'" class="app-note">{{ $t('No matching store app') }}</p>
+
+        <details v-if="(app.registry_images || []).length || app.rollback_version" class="app-details">
+          <summary>{{ $t('Details') }}</summary>
+          <div class="details-content">
+            <p v-if="ready(app)" class="details-note">{{ $t('Includes the latest app store defaults and newer image versions. Your settings and data are kept.') }}</p>
+            <div v-for="image in app.registry_images || []" :key="image.service" class="image-detail">
+              <h5>{{ image.service }}</h5>
+              <p><span>{{ $t('Installed') }}</span><code>{{ image.installed_image || image.image }}</code></p>
+              <p v-if="image.latest_image"><span>{{ $t('Update') }}</span><code>{{ image.latest_image }}</code></p>
+              <p v-if="image.error" class="app-error">{{ image.error }}</p>
+            </div>
+            <div v-if="app.rollback_version" class="restore-row">
+              <div><p>{{ $t('Previous version') }}: {{ app.rollback_version }}</p><small>{{ formatDate(app.rollback_date) }}</small></div>
+              <button class="text-button" :disabled="busy(app) || !app.rollback_available || submitting" @click="confirm(app, true)">{{ $t('Restore') }}</button>
+            </div>
+            <p v-if="app.rollback_reason" class="app-error">{{ app.rollback_reason }}</p>
+          </div>
+        </details>
+      </article>
+    </section>
+
     <b-modal :active.sync="confirmOpen" has-modal-card trap-focus :can-cancel="!submitting">
-      <div class="modal-card" style="width: auto; max-width: 480px">
-        <header class="modal-card-head"><h3 class="modal-card-title">{{ rollback ? $t('Revert to previous version') : $t('Update app') }}</h3></header>
+      <div class="modal-card update-confirmation">
+        <header class="modal-card-head"><h3 class="modal-card-title">{{ $t(rollback ? 'Revert to previous version' : 'Update app') }}</h3></header>
         <section class="modal-card-body">
-          <p class="has-text-weight-semibold mb-3">{{ selected ? title(selected) : '' }}</p>
+          <p class="confirmation-app">{{ selected ? title(selected) : '' }}</p>
+          <p v-if="selected" class="confirmation-version">{{ selected.current_version }} <span aria-hidden="true">→</span> {{ rollback ? selected.rollback_version : selected.target_version }}</p>
           <p>{{ $t('The app may briefly stop. Current app data will be kept. Reverting the app version cannot undo database changes made by an update.') }}</p>
           <p v-if="rollback" class="mt-3">{{ $t('App settings will also return to their saved values.') }}</p>
-          <p v-if="actionError" class="has-text-danger mt-3" role="alert">{{ actionError }}</p>
+          <p v-if="actionError" class="app-error mt-3" role="alert">{{ actionError }}</p>
         </section>
         <footer class="modal-card-foot">
-          <b-button :disabled="submitting" @click="confirmOpen = false">{{ $t('Cancel') }}</b-button>
-          <b-button type="is-primary" :loading="submitting" :disabled="submitting" @click="submit">
-            {{ rollback ? $t('Revert') : $t('Update') }}
-          </b-button>
+          <button class="check-button" :disabled="submitting" @click="confirmOpen = false">{{ $t('Cancel') }}</button>
+          <button class="update-button confirm-button" :disabled="submitting" :aria-busy="submitting" @click="submit">{{ $t(submitting ? 'Starting' : rollback ? 'Restore' : 'Update') }}</button>
         </footer>
       </div>
     </b-modal>
-  </div>
+  </section>
 </template>
 
 <script>
@@ -99,56 +114,59 @@ import { ice_i18n } from '@/mixins/base/common-i18n'
 
 export default {
   data: () => ({
-    apps: [], source: 'registry', loading: true, checking: false, unavailable: false, registryUnavailable: false, error: '',
+    apps: [], loading: true, checking: false, unavailable: false, unsupported: false, error: '', brokenIcons: {},
     confirmOpen: false, selected: null, rollback: false, submitting: false, actionError: '',
     timer: null, disposed: false, fetching: false,
   }),
   computed: {
-    sortedApps() {
-      const available = app => this.source === 'registry' ? (app.registry_images || []).some(image => image.status === 'available') : app.check_status === 'available'
-      return [...this.apps].sort((a, b) => Number(available(b)) - Number(available(a)) || a.id.localeCompare(b.id))
+    groups() {
+      const sorted = [...this.apps].sort((a, b) => this.title(a).localeCompare(this.title(b)))
+      const pending = app => this.ready(app) || this.busy(app)
+      const attention = app => Boolean(app.check_error || app.error || ['failed', 'unmanaged'].includes(app.check_status))
+      return [
+        { id: 'available', title: 'Available updates', apps: sorted.filter(pending) },
+        { id: 'attention', title: 'Needs attention', apps: sorted.filter(app => !pending(app) && attention(app)) },
+        { id: 'current', title: 'Installed apps', apps: sorted.filter(app => !pending(app) && !attention(app)) },
+      ].filter(group => group.apps.length)
     },
-    lastChecked() {
-      return this.apps.map(app => this.source === 'registry' ? app.registry_checked_at : app.checked_at).filter(Boolean).sort().pop()
+    lastChecked() { return this.apps.map(app => app.checked_at).filter(Boolean).sort().pop() },
+    overviewText() {
+      if (this.checking) return this.$t('Looking for updates…')
+      const count = this.apps.filter(this.ready).length
+      if (count === 1) return this.$t('1 update available')
+      if (count) return this.$t('{count} updates available', { count })
+      if (this.apps.some(this.busy)) return this.$t('Updating your apps…')
+      if (this.apps.length && this.apps.every(app => app.check_status === 'up_to_date')) return this.$t('All apps are up to date')
+      return this.$t('Your apps')
     },
   },
   async mounted() {
     await this.refresh(false)
-    if (!this.unavailable && (this.source !== 'registry' || !this.registryUnavailable) && !this.error && !this.disposed) await this.refresh(true)
+    if (!this.unavailable && !this.unsupported && !this.error && !this.disposed) await this.refresh(true)
   },
-  beforeDestroy() {
-    this.disposed = true
-    clearTimeout(this.timer)
-  },
+  beforeDestroy() { this.disposed = true; clearTimeout(this.timer) },
   methods: {
     title: app => ice_i18n(app.title) || app.id,
-    formatDate: value => value ? new Date(value).toLocaleString() : '',
+    formatDate: value => value ? new Date(value).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '',
     busy: app => ['busy', 'preparing', 'pulling', 'applying', 'reverting'].includes(app.operation),
-    shortImageID: value => value.replace(/^sha256:/, '').slice(0, 12),
-    registryLabel(status) {
-      return this.$t({ available: 'Registry update available', up_to_date: 'Up to date', pinned: 'Pinned to an exact image', unsupported: 'Registry version unknown', failed: 'Check failed' }[status] || 'Not checked yet')
-    },
-    changeSource() { return this.refresh(true) },
-    checkLabel(status) {
-      return this.$t({ unchecked: 'Not checked yet', available: 'Update available', up_to_date: 'Up to date', unmanaged: 'No matching store app', failed: 'Check failed' }[status] || 'Not checked yet')
-    },
+    ready: app => app.check_status === 'available' && app.update_ready && Boolean(app.update_token),
     operationLabel(status) {
       return this.$t({ busy: 'Another app operation is running', preparing: 'Saving previous version', pulling: 'Downloading update', applying: 'Starting updated app', reverting: 'Restoring previous version', updated: 'Update completed', reverted: 'Previous version restored', failed: 'Operation failed', interrupted: 'Operation interrupted' }[status] || '')
     },
-    message(error) {
-      return error.response?.data?.message || this.$t('Could not load app updates. Please try again.')
-    },
+    message(error) { return error.response?.data?.message || this.$t('Could not load app updates. Please try again.') },
     async refresh(check) {
-      if (this.fetching || this.disposed) return
-      if (check && this.source === 'registry' && this.registryUnavailable) return
+      if (this.fetching || this.disposed || (check && this.unsupported)) return
       clearTimeout(this.timer)
       this.fetching = true
       this.checking = check
+      let completed = false
       try {
-        const response = await (check ? updates.check(this.source) : updates.list())
+        const response = await (check ? updates.check() : updates.list())
         if (!this.disposed) {
-          this.apps = response.data.data
-          this.registryUnavailable = response.data.registry_supported !== true
+          const apps = response.data.data
+          completed = apps.some(app => ['updated', 'reverted'].includes(app.operation) && this.apps.some(old => old.id === app.id && this.busy(old)))
+          this.apps = apps
+          this.unsupported = response.data.combined_updates_supported !== true
           this.unavailable = false
           this.error = ''
         }
@@ -161,46 +179,109 @@ export default {
         this.fetching = false
         this.loading = false
         this.checking = false
-        if (!this.disposed && !this.unavailable) this.timer = setTimeout(() => this.refresh(false), this.apps.some(this.busy) ? 3000 : 15000)
+        if (!this.disposed && !this.unavailable) this.timer = setTimeout(() => this.refresh(completed), this.apps.some(this.busy) || completed ? 3000 : 15000)
       }
     },
     confirm(app, rollback) {
-      this.selected = app
+      if (this.busy(app) || (!rollback && (!this.ready(app) || this.unsupported || this.fetching))) return
+      this.selected = { ...app }
       this.rollback = rollback
       this.actionError = ''
       this.confirmOpen = true
     },
     async submit() {
-      if (this.submitting) return
+      if (this.submitting || !this.selected) return
       this.submitting = true
       this.actionError = ''
       try {
-        await (this.rollback ? updates.rollback(this.selected.id) : updates.update(this.selected.id))
-        this.selected.operation = this.rollback ? 'reverting' : 'preparing'
+        await (this.rollback ? updates.rollback(this.selected.id) : updates.update(this.selected.id, this.selected.update_token))
+        const app = this.apps.find(app => app.id === this.selected.id)
+        if (app) app.operation = this.rollback ? 'reverting' : 'preparing'
         this.confirmOpen = false
         await this.refresh(false)
-      } catch (error) {
-        this.actionError = this.message(error)
-      } finally {
-        this.submitting = false
-      }
+      } catch (error) { this.actionError = this.message(error) }
+      finally { this.submitting = false }
     },
   },
 }
 </script>
 
 <style scoped>
-.updates-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-.update-row { display: flex; align-items: flex-start; gap: 1rem; padding: 1.25rem 0; border-bottom: 1px solid rgba(128,128,128,.2); }
-.update-icon { width: 48px; height: 48px; border-radius: 12px; object-fit: contain; }
-.update-details { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.update-actions { display: flex; flex-direction: column; gap: .5rem; align-items: flex-end; }
-.registry-image { margin-top: .75rem; padding-left: .75rem; border-left: 2px solid rgba(128,128,128,.25); }
-.registry-image code { color: inherit; overflow-wrap: anywhere; }
-.registry-digests { margin-top: .25rem; color: #657580; }
+.app-updates { --update-blue: #0866ce; --update-ink: #202c3b; --update-muted: #687587; color: var(--update-ink); padding: 8px 0 24px; }
+.updates-header { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 28px; }
+.updates-header h2 { font-size: 28px; font-weight: 700; letter-spacing: -.7px; line-height: 1.2; margin: 0 0 8px; }
+.updates-header p, .last-checked { color: var(--update-muted); font-size: 13px; }
+.check-button, .update-button, .text-button { font: inherit; border: 0; cursor: pointer; transition: background .15s ease, color .15s ease; }
+.check-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; background: #f1f4f8; border-radius: 10px; color: #3e4d61; font-size: 13px; font-weight: 600; padding: 9px 14px; }
+.check-button:hover { background: #e6ecf3; }
+.refresh-icon { font-size: 22px; line-height: 16px; display: inline-block; }
+.updates-overview { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid #e7ebf0; }
+.overview-count { font-size: 14px; font-weight: 600; }
+.last-checked { font-size: 12px; }
+.update-group { margin-top: 28px; }
+.group-header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.group-header h3 { font-size: 17px; font-weight: 650; }
+.group-header > span { border-radius: 20px; padding: 2px 8px; background: #edf2f8; color: #607087; font-size: 11px; font-weight: 600; }
+.update-card { padding: 22px 0; border-bottom: 1px solid #e7ebf0; }
+.app-row { display: flex; align-items: center; gap: 16px; }
+.app-icon { width: 60px; height: 60px; flex: 0 0 60px; border-radius: 14px; overflow: hidden; }
+.app-icon img { width: 100%; height: 100%; object-fit: contain; }
+.icon-fallback { display: grid; place-items: center; background: #eaf1fb; color: #38649f; font-size: 25px; font-weight: 650; }
+.app-summary { flex: 1; min-width: 0; }
+.app-summary h4 { font-size: 17px; font-weight: 650; line-height: 1.35; margin: 0 0 6px; overflow-wrap: anywhere; }
+.app-version { color: var(--update-muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.version-arrow { margin: 0 8px; color: #929dae; }
+.new-version { color: #354963; font-weight: 600; }
+.update-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border-radius: 24px; min-width: 94px; min-height: 36px; padding: 8px 18px; background: #eaf3ff; color: var(--update-blue); font-size: 14px; font-weight: 700; }
+.update-button:hover { background: #d7e9ff; }
+button:disabled { cursor: default; opacity: .55; }
+button:focus-visible, summary:focus-visible { outline: 2px solid var(--update-blue); outline-offset: 4px; }
+.current-mark { display: block; margin-right: 24px; color: #558269; font-size: 20px; }
+.app-details { margin: 10px 0 0 76px; font-size: 12px; }
+.app-details summary { display: list-item; width: fit-content; color: var(--update-blue); cursor: pointer; padding: 3px 0; }
+.details-content { padding: 14px 16px; background: #f6f8fb; border-radius: 10px; margin-top: 10px; }
+.details-note { margin-bottom: 14px; color: #5d6d81; }
+.image-detail + .image-detail { margin-top: 16px; }
+.image-detail h5 { font-size: 12px; font-weight: 650; margin-bottom: 6px; }
+.image-detail p { display: flex; gap: 10px; margin-top: 4px; }
+.image-detail p > span { flex: 0 0 56px; color: var(--update-muted); }
+.image-detail code { padding: 0; background: transparent; color: #455970; overflow-wrap: anywhere; min-width: 0; font-size: 11px; }
+.app-error { color: #aa3b3b; font-size: 13px; line-height: 1.5; margin: 10px 0 0 76px; overflow-wrap: anywhere; }
+.details-content .app-error, .update-confirmation .app-error { margin-left: 0; }
+.app-note { margin: 8px 0 0 76px; color: var(--update-muted); font-size: 12px; }
+.restore-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 1px solid #dfe6ef; padding-top: 14px; margin-top: 16px; }
+.restore-row small { color: var(--update-muted); }
+.text-button { background: transparent; color: var(--update-blue); font-size: 12px; font-weight: 600; padding: 6px 0; }
+.updates-notice { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px; margin-bottom: 20px; background: #f1f5fa; border-radius: 10px; font-size: 13px; }
+.notice-error { background: #fff2ef; color: #a44438; }
+.updates-empty { padding: 52px 20px; text-align: center; }
+.empty-symbol { display: block; font-size: 32px; color: #8c9bb0; margin-bottom: 12px; }
+.updates-empty h3 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+.updates-empty p { font-size: 13px; color: var(--update-muted); }
+.app-progress { display: block; width: calc(100% - 76px); height: 3px; margin: 12px 0 0 76px; border: 0; accent-color: var(--update-blue); }
+.update-confirmation { width: 460px; max-width: calc(100vw - 32px); }
+.confirmation-app { font-size: 20px; font-weight: 650; margin-bottom: 6px; }
+.confirmation-version { color: var(--update-muted); margin-bottom: 18px; }
+.confirmation-version span { padding: 0 8px; }
+.update-confirmation .modal-card-body { font-size: 14px; line-height: 1.6; }
+.update-confirmation .modal-card-foot { justify-content: flex-end; }
+.confirm-button { background: var(--update-blue); color: white; }
+.confirm-button:hover { background: #0054af; }
+.button-spinner { border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; width: 12px; height: 12px; animation: update-spin 1s linear infinite; }
+.spinning { animation: update-spin 1s linear infinite; }
+@keyframes update-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinning, .button-spinner { animation: none; } }
 @media (max-width: 640px) {
-  .updates-toolbar { align-items: flex-start; flex-direction: column; }
-  .update-row { flex-wrap: wrap; }
-  .update-actions { width: 100%; align-items: stretch; }
+  .updates-header { align-items: flex-start; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+  .updates-header h2 { font-size: 25px; }
+  .app-row { gap: 12px; }
+  .app-icon { width: 48px; height: 48px; flex-basis: 48px; border-radius: 12px; }
+  .app-summary h4 { font-size: 15px; }
+  .app-version { font-size: 12px; }
+  .update-button { min-width: 76px; min-height: 36px; padding: 8px 12px; font-size: 13px; }
+  .app-details, .app-note, .app-error { margin-left: 60px; }
+  .app-progress { width: calc(100% - 60px); margin-left: 60px; }
+  .current-mark { margin-right: 12px; }
+  .details-content { margin-left: -60px; }
 }
 </style>
