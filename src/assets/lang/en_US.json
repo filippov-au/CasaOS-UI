@@ -492,5 +492,9 @@
   "Your apps": "Your apps",
   "Your installed apps will appear here.": "Your installed apps will appear here.",
   "{count} updates available": "{count} updates available",
-  "1 update available": "1 update available"
+  "1 update available": "1 update available",
+  "Updates the app images. Your settings and data are kept.": "Updates the app images. Your settings and data are kept.",
+  "Image": "Image",
+  "New image": "New image",
+  "Build {id}": "Build {id}"
 }

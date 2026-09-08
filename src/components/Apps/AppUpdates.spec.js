@@ -50,6 +50,26 @@ describe('Unified app updates', () => {
     expect(wrapper.find('details').text()).toContain('ghcr.io/advplyr/audiobookshelf:2.36.0')
     expect(wrapper.text()).not.toContain('sha256:')
   })
+  it('shows installed and registry versions behind the same latest tag', async () => {
+    const image = 'linuxserver/radarr:latest'
+    const item = app({ id: 'radarr', title: { en_us: 'Radarr' }, current_version: '5.0.3.8127-ls190', target_version: '5.1.0.9000-ls200', registry_images: [{ service: 'radarr', installed_image: image, latest_image: image, current_version: '5.0.3.8127-ls190', latest_version: '5.1.0.9000-ls200' }] })
+    updates.list.mockResolvedValue(response([item])); updates.check.mockResolvedValue(response([item]))
+    const wrapper = render(); await flush()
+    expect(wrapper.find('.app-row').text()).toContain('5.0.3.8127-ls190')
+    expect(wrapper.find('.app-row').text()).toContain('5.1.0.9000-ls200')
+    const details = wrapper.find('details').text()
+    expect(details).toContain('Installed5.0.3.8127-ls190')
+    expect(details).toContain('Update5.1.0.9000-ls200')
+    expect(details.split(image)).toHaveLength(2)
+    expect(details).not.toContain('app store defaults')
+  })
+  it('distinguishes unpublished versions using immutable build IDs', async () => {
+    const item = app({ registry_images: [{ service: 'main', installed_image: 'demo:latest', latest_image: 'demo:latest', current_image_id: 'sha256:abcdef0123456789', latest_image_id: 'sha256:987654fedcba1234' }] })
+    updates.list.mockResolvedValue(response([item])); updates.check.mockResolvedValue(response([item]))
+    const wrapper = render(); await flush()
+    expect(wrapper.find('details').text()).toContain('Build abcdef012345')
+    expect(wrapper.find('details').text()).toContain('Build 987654fedcba')
+  })
   it('groups available apps, errors and current apps with clear states', async () => {
     const apps = [app(), app({ id: 'broken', title: { en_us: 'Broken' }, check_status: 'failed', update_ready: false, check_error: 'Registry unavailable' }), app({ id: 'current', title: { en_us: 'Current' }, check_status: 'up_to_date', update_ready: false })]
     updates.list.mockResolvedValue(response(apps)); updates.check.mockResolvedValue(response(apps))

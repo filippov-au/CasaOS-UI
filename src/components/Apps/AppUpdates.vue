@@ -72,11 +72,13 @@
         <details v-if="(app.registry_images || []).length || app.rollback_version" class="app-details">
           <summary>{{ $t('Details') }}</summary>
           <div class="details-content">
-            <p v-if="ready(app)" class="details-note">{{ $t('Includes the latest app store defaults and newer image versions. Your settings and data are kept.') }}</p>
+            <p v-if="ready(app)" class="details-note">{{ $t('Updates the app images. Your settings and data are kept.') }}</p>
             <div v-for="image in app.registry_images || []" :key="image.service" class="image-detail">
               <h5>{{ image.service }}</h5>
-              <p><span>{{ $t('Installed') }}</span><code>{{ image.installed_image || image.image }}</code></p>
-              <p v-if="image.latest_image"><span>{{ $t('Update') }}</span><code>{{ image.latest_image }}</code></p>
+              <p><span>{{ $t('Installed') }}</span><strong>{{ imageVersion(image.current_version, image.current_image_id) }}</strong></p>
+              <p v-if="image.latest_image"><span>{{ $t('Update') }}</span><strong>{{ imageVersion(image.latest_version, image.latest_image_id) }}</strong></p>
+              <p><span>{{ $t('Image') }}</span><code>{{ image.installed_image || image.image }}</code></p>
+              <p v-if="image.latest_image && image.latest_image !== (image.installed_image || image.image)"><span>{{ $t('New image') }}</span><code>{{ image.latest_image }}</code></p>
               <p v-if="image.error" class="app-error">{{ image.error }}</p>
             </div>
             <div v-if="app.rollback_version" class="restore-row">
@@ -146,6 +148,10 @@ export default {
   },
   beforeDestroy() { this.disposed = true; clearTimeout(this.timer) },
   methods: {
+    imageVersion(version, id) {
+      if (version && !['latest', 'stable', 'main', 'master', 'nightly'].includes(version)) return version
+      return id ? this.$t('Build {id}', { id: id.replace(/^sha256:/, '').slice(0, 12) }) : this.$t('Unknown')
+    },
     title: app => ice_i18n(app.title) || app.id,
     formatDate: value => value ? new Date(value).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '',
     busy: app => ['busy', 'preparing', 'pulling', 'applying', 'reverting'].includes(app.operation),
@@ -245,6 +251,7 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--update-bl
 .image-detail h5 { font-size: 12px; font-weight: 650; margin-bottom: 6px; }
 .image-detail p { display: flex; gap: 10px; margin-top: 4px; }
 .image-detail p > span { flex: 0 0 56px; color: var(--update-muted); }
+.image-detail strong { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
 .image-detail code { padding: 0; background: transparent; color: #455970; overflow-wrap: anywhere; min-width: 0; font-size: 11px; }
 .app-error { color: #aa3b3b; font-size: 13px; line-height: 1.5; margin: 10px 0 0 76px; overflow-wrap: anywhere; }
 .details-content .app-error, .update-confirmation .app-error { margin-left: 0; }
