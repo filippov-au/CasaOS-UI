@@ -9,6 +9,13 @@
 
 export default [
 	{
+		path: '/updates',
+		name: 'SystemUpdates',
+		hidden: true,
+		component: () => import('@/views/SystemUpdates.vue'),
+		meta: { requireAuth: true, showBackground: false }
+	},
+	{
 		path: '/login',
 		name: 'Login',
 		hidden: true,

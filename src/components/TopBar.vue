@@ -2,7 +2,6 @@
 import AccountPanel from './account/AccountPanel.vue'
 import TerminalPanel from './logsAndTerminal/TerminalPanel.vue'
 import PortPanel from './settings/PortPanel.vue'
-import UpdateModal from './settings/UpdateModal.vue'
 import { mixin } from '@/mixins/mixin'
 import messages from '@/assets/lang'
 
@@ -329,25 +328,11 @@ export default {
     },
 
     /**
-     * @description: Open Update Modal
+     * @description: Open the system updates page
      * @return {*} void
      */
-    showUpdateModal() {
-      this.$messageBus('dashboardsetting_versionupdate', true.toString())
-      this.$buefy.modal.open({
-        parent: this,
-        component: UpdateModal,
-        hasModalCard: true,
-        trapFocus: true,
-        canCancel: ['escape'],
-        scroll: 'keep',
-        animation: 'zoom-in',
-        props: {
-          changeLog: this.updateInfo.version.change_log,
-          sourceRunning: this.updateInfo.source?.operation === 'running',
-          sourceMode: Boolean(this.updateInfo.source),
-        },
-      })
+    showUpdates() {
+      this.$router.push('/updates')
     },
 
     /*************************************************
@@ -760,19 +745,19 @@ export default {
               </div>
             </div>
 
-            <div v-if="updateCheckError" class="has-text-danger is-size-7 pl-5" role="status">
-              {{ $t('Unable to check for updates') }}
-            </div>
-            <div v-else-if="!updateInfo.need_update" class="is-flex is-align-items-center pl-55 ml-1 is-size-7">
-              {{ $t(latestText) }}
-              <b-icon class="ml-1" custom-size="mdi-18px" icon="check" type="is-success" />
-            </div>
-            <div v-else class="is-flex is-align-items-center is-justify-content-end update-container pl-5">
-              <div class="is-flex-grow-1 is-size-7">
+            <div class="is-flex is-align-items-center update-container pl-5">
+              <div v-if="updateCheckError" class="has-text-danger is-size-7 is-flex-grow-1" role="status">
+                {{ $t('Unable to check for updates') }}
+              </div>
+              <div v-else-if="!updateInfo.need_update" class="is-flex is-align-items-center is-flex-grow-1 is-size-7">
+                {{ $t(latestText) }}
+                <b-icon class="ml-1" custom-size="mdi-18px" icon="check" type="is-success" />
+              </div>
+              <div v-else class="is-flex-grow-1 is-size-7">
                 {{ $t(updateText) }}
               </div>
-              <b-button class="ml-2" rounded size="is-small" type="is-dark" @click="showUpdateModal">
-                {{ $t("Update") }}
+              <b-button class="ml-2" rounded size="is-small" type="is-dark" @click="showUpdates">
+                {{ $t('View updates') }}
               </b-button>
             </div>
           </div>
