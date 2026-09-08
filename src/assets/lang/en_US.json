@@ -442,5 +442,7 @@
   "Update app": "Update app",
   "Update available": "Update available",
   "Updates": "Updates",
-  "Updates come from your configured app stores.": "Updates come from your configured app stores."
+  "Updates come from your configured app stores.": "Updates come from your configured app stores.",
+  "Unable to check for updates": "Unable to check for updates",
+  "Unable to start update": "Unable to start update"
 }

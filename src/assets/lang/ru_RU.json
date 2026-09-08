@@ -409,5 +409,7 @@
   "Installing {title}": "Установка {title}",
   "Legacy app (To be rebuilt).": "Устаревшее приложение (должно быть перестроено).",
   "To be rebuilt.": "Будет перестроено.",
-  "launch-and-open": "Запустить и открыть"
+  "launch-and-open": "Запустить и открыть",
+  "Unable to check for updates": "Не удалось проверить обновления",
+  "Unable to start update": "Не удалось запустить обновление"
 }
