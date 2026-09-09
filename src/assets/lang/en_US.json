@@ -508,5 +508,14 @@
   "Version": "Version",
   "Pinned image": "Pinned image",
   "The same images are already installed. Pin their numbered versions for future updates.": "The same images are already installed. Pin their numbered versions for future updates.",
-  "This saves a numbered image reference. The software version stays the same. The app may briefly stop; your settings and data are kept.": "This saves a numbered image reference. The software version stays the same. The app may briefly stop; your settings and data are kept."
+  "This saves a numbered image reference. The software version stays the same. The app may briefly stop; your settings and data are kept.": "This saves a numbered image reference. The software version stays the same. The app may briefly stop; your settings and data are kept.",
+  "Update all": "Update all",
+  "Update all apps": "Update all apps",
+  "Update {count} apps to the versions below?": "Update {count} apps to the versions below?",
+  "The apps may briefly stop. Your settings and data are kept. Failed updates remain in the list for review.": "The apps may briefly stop. Your settings and data are kept. Failed updates remain in the list for review.",
+  "Started {started} of {total} updates. Apps that could not start remain in the list.": "Started {started} of {total} updates. Apps that could not start remain in the list.",
+  "Started {count} app updates.": "Started {count} app updates.",
+  "No pending updates": "No pending updates",
+  "Check for updates when you want to look for newer versions.": "Check for updates when you want to look for newer versions.",
+  "Restore previous versions": "Restore previous versions"
 }

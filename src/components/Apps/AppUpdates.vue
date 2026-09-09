@@ -5,10 +5,15 @@
         <h2>{{ $t('App updates') }}</h2>
         <p>{{ $t('Keep your apps up to date.') }}</p>
       </div>
-      <button class="check-button" :disabled="fetching || unavailable || unsupported" :aria-busy="checking" @click="refresh(true)">
-        <span class="refresh-icon" :class="{ spinning: checking }" aria-hidden="true">↻</span>
-        {{ $t(checking ? 'Checking for updates' : 'Check for updates') }}
-      </button>
+      <div class="header-actions">
+        <button class="check-button" :disabled="fetching || submitting || working || unavailable || unsupported" :aria-busy="checking" @click="refresh(true)">
+          <span class="refresh-icon" :class="{ spinning: checking }" aria-hidden="true">↻</span>
+          {{ $t(checking ? 'Checking for updates' : 'Check for updates') }}
+        </button>
+        <button class="update-button update-all-button" :disabled="!availableUpdates.length || fetching || submitting || unavailable || unsupported" @click="confirmAll">
+          {{ $t('Update all') }}<span v-if="availableUpdates.length"> ({{ availableUpdates.length }})</span>
+        </button>
+      </div>
     </header>
 
     <div v-if="unavailable || unsupported" class="updates-notice" role="status">
@@ -18,6 +23,7 @@
       <span>{{ error }}</span>
       <button class="text-button" :disabled="fetching" @click="refresh(false)">{{ $t('Retry') }}</button>
     </div>
+    <p v-if="bulkResult" class="bulk-result" role="status">{{ bulkResult }}</p>
 
     <div class="updates-overview" aria-live="polite">
       <span v-if="loading">{{ $t('Loading') }}…</span>
@@ -27,10 +33,10 @@
       </template>
     </div>
 
-    <div v-if="!loading && !unavailable && !unsupported && !error && !apps.length" class="updates-empty">
+    <div v-if="!loading && !checking && !unavailable && !unsupported && !error && !groups.length" class="updates-empty">
       <span class="empty-symbol" aria-hidden="true">↓</span>
-      <h3>{{ $t('No installed apps') }}</h3>
-      <p>{{ $t('Your installed apps will appear here.') }}</p>
+      <h3>{{ $t(apps.length ? 'No pending updates' : 'No installed apps') }}</h3>
+      <p>{{ $t(apps.length ? 'Check for updates when you want to look for newer versions.' : 'Your installed apps will appear here.') }}</p>
     </div>
 
     <section v-for="group in groups" :key="group.id" class="update-group" :aria-label="$t(group.title)">
@@ -61,12 +67,12 @@
               <span v-if="busy(app)" class="button-spinner" aria-hidden="true" />
               {{ $t(busy(app) ? (pinOnly(app) ? 'Pinning' : 'Updating') : (pinOnly(app) ? 'Pin version' : 'Update')) }}
             </button>
-            <span v-else-if="app.check_status === 'up_to_date'" class="current-mark" :aria-label="$t('Up to date')">✓</span>
           </div>
         </div>
         <progress v-if="busy(app)" class="app-progress" :aria-label="operationLabel(app.operation)" />
         <p v-if="app.check_error" class="app-error" role="status">{{ app.check_error }}</p>
         <p v-if="app.error" class="app-error" role="status">{{ app.error }}</p>
+        <p v-if="submissionErrors[app.id]" class="app-error" role="alert">{{ submissionErrors[app.id] }}</p>
         <p v-if="!busy(app) && app.check_status === 'unchecked'" class="app-note">{{ $t('Not checked yet') }}</p>
         <p v-if="!busy(app) && app.check_status === 'unmanaged'" class="app-note">{{ $t('No matching store app') }}</p>
 
@@ -92,21 +98,36 @@
       </article>
     </section>
 
+    <details v-if="restoreApps.length" class="restore-history">
+      <summary>{{ $t('Restore previous versions') }}</summary>
+      <div v-for="app in restoreApps" :key="app.id" class="restore-row">
+        <div><p>{{ title(app) }} · {{ app.rollback_version }}</p><small>{{ formatDate(app.rollback_date) }}</small><p v-if="app.rollback_reason" class="app-error">{{ app.rollback_reason }}</p></div>
+        <button class="text-button" :disabled="busy(app) || !app.rollback_available || submitting" @click="confirm(app, true)">{{ $t('Restore') }}</button>
+      </div>
+    </details>
+
     <b-modal :active.sync="confirmOpen" has-modal-card trap-focus :can-cancel="!submitting">
       <div class="modal-card update-confirmation">
-        <header class="modal-card-head"><h3 class="modal-card-title">{{ $t(rollback ? 'Revert to previous version' : pinOnly(selected) ? 'Pin current version' : 'Update app') }}</h3></header>
+        <header class="modal-card-head"><h3 class="modal-card-title">{{ $t(bulk ? 'Update all apps' : rollback ? 'Revert to previous version' : pinOnly(selected) ? 'Pin current version' : 'Update app') }}</h3></header>
         <section class="modal-card-body">
-          <p class="confirmation-app">{{ selected ? title(selected) : '' }}</p>
+          <template v-if="bulk">
+            <p>{{ $t('Update {count} apps to the versions below?', { count: selectedApps.length }) }}</p>
+            <ul class="bulk-app-list">
+              <li v-for="app in selectedApps" :key="app.id"><strong>{{ title(app) }}</strong><span>{{ app.current_version }} → {{ app.target_version }}</span></li>
+            </ul>
+          </template>
+          <p v-else class="confirmation-app">{{ selected ? title(selected) : '' }}</p>
           <p v-if="selected && !rollback && pinOnly(selected)" class="confirmation-version">{{ selected.current_version }} · {{ $t('Already installed') }}</p>
           <p v-else-if="selected" class="confirmation-version">{{ selected.current_version }} <span aria-hidden="true">→</span> {{ rollback ? selected.rollback_version : selected.target_version }}</p>
-          <p v-if="!rollback && pinOnly(selected)">{{ $t('This saves a numbered image reference. The software version stays the same. The app may briefly stop; your settings and data are kept.') }}</p>
+          <p v-if="bulk">{{ $t('The apps may briefly stop. Your settings and data are kept. Failed updates remain in the list for review.') }}</p>
+          <p v-else-if="!rollback && pinOnly(selected)">{{ $t('This saves a numbered image reference. The software version stays the same. The app may briefly stop; your settings and data are kept.') }}</p>
           <p v-else>{{ $t('The app may briefly stop. Current app data will be kept. Reverting the app version cannot undo database changes made by an update.') }}</p>
           <p v-if="rollback" class="mt-3">{{ $t('App settings will also return to their saved values.') }}</p>
           <p v-if="actionError" class="app-error mt-3" role="alert">{{ actionError }}</p>
         </section>
         <footer class="modal-card-foot">
           <button class="check-button" :disabled="submitting" @click="confirmOpen = false">{{ $t('Cancel') }}</button>
-          <button class="update-button confirm-button" :disabled="submitting" :aria-busy="submitting" @click="submit">{{ $t(submitting ? 'Starting' : rollback ? 'Restore' : pinOnly(selected) ? 'Pin version' : 'Update') }}</button>
+          <button class="update-button confirm-button" :disabled="submitting" :aria-busy="submitting" @click="submit">{{ $t(submitting ? 'Starting' : bulk ? 'Update all' : rollback ? 'Restore' : pinOnly(selected) ? 'Pin version' : 'Update') }}</button>
         </footer>
       </div>
     </b-modal>
@@ -121,24 +142,27 @@ export default {
   data: () => ({
     apps: [], loading: true, checking: false, unavailable: false, unsupported: false, error: '', brokenIcons: {},
     confirmOpen: false, selected: null, rollback: false, submitting: false, actionError: '',
+    bulk: false, selectedApps: [], submissionErrors: {}, bulkResult: '',
     timer: null, disposed: false, fetching: false,
   }),
   computed: {
+    working() { return this.apps.some(this.busy) },
+    availableUpdates() { return this.apps.filter(app => this.ready(app) && !this.busy(app) && !this.pinOnly(app)) },
+    restoreApps() { return this.apps.filter(app => app.rollback_version).sort((a, b) => this.title(a).localeCompare(this.title(b))) },
     groups() {
       const sorted = [...this.apps].sort((a, b) => this.title(a).localeCompare(this.title(b)))
       const pending = app => this.ready(app) || this.busy(app)
-      const attention = app => Boolean(app.check_error || app.error || ['failed', 'unmanaged'].includes(app.check_status))
+      const attention = app => Boolean(app.check_error || app.error || this.submissionErrors[app.id] || ['failed', 'unmanaged'].includes(app.check_status) || ['failed', 'interrupted'].includes(app.operation))
       return [
         { id: 'available', title: 'Available updates', apps: sorted.filter(app => pending(app) && !this.pinOnly(app)) },
         { id: 'pins', title: 'Version pinning', apps: sorted.filter(app => pending(app) && this.pinOnly(app)) },
         { id: 'attention', title: 'Needs attention', apps: sorted.filter(app => !pending(app) && attention(app)) },
-        { id: 'current', title: 'Installed apps', apps: sorted.filter(app => !pending(app) && !attention(app)) },
       ].filter(group => group.apps.length)
     },
     lastChecked() { return this.apps.map(app => app.checked_at).filter(Boolean).sort().pop() },
     overviewText() {
       if (this.checking) return this.$t('Looking for updates…')
-      const count = this.apps.filter(app => this.ready(app) && !this.pinOnly(app)).length
+      const count = this.availableUpdates.length
       if (count === 1) return this.$t('1 update available')
       if (count) return this.$t('{count} updates available', { count })
       if (this.apps.some(this.busy)) return this.$t(this.apps.filter(this.busy).every(this.pinOnly) ? 'Pinning versions…' : 'Updating your apps…')
@@ -149,7 +173,7 @@ export default {
   },
   async mounted() {
     await this.refresh(false)
-    if (!this.unavailable && !this.unsupported && !this.error && !this.disposed) await this.refresh(true)
+    if (!this.unavailable && !this.unsupported && !this.error && !this.disposed && !this.working) await this.refresh(true)
   },
   beforeDestroy() { this.disposed = true; clearTimeout(this.timer) },
   methods: {
@@ -168,17 +192,19 @@ export default {
     },
     message(error) { return error.response?.data?.message || this.$t('Could not load app updates. Please try again.') },
     async refresh(check) {
-      if (this.fetching || this.disposed || (check && this.unsupported)) return
+      if (this.fetching || this.disposed || (check && (this.unsupported || this.submitting || this.working))) return
       clearTimeout(this.timer)
       this.fetching = true
       this.checking = check
-      let completed = false
       try {
         const response = await (check ? updates.check() : updates.list())
         if (!this.disposed) {
           const apps = response.data.data
-          completed = apps.some(app => ['updated', 'reverted'].includes(app.operation) && this.apps.some(old => old.id === app.id && this.busy(old)))
           this.apps = apps
+          if (check) this.submissionErrors = {}
+          else apps.forEach(app => {
+            if (['updated', 'reverted'].includes(app.operation) && !this.ready(app) && !app.error) this.$delete(this.submissionErrors, app.id)
+          })
           this.unsupported = response.data.combined_updates_supported !== true
           this.unavailable = false
           this.error = ''
@@ -192,22 +218,59 @@ export default {
         this.fetching = false
         this.loading = false
         this.checking = false
-        if (!this.disposed && !this.unavailable) this.timer = setTimeout(() => this.refresh(completed), this.apps.some(this.busy) || completed ? 3000 : 15000)
+        if (!this.disposed && !this.unavailable) this.timer = setTimeout(() => this.refresh(false), this.working ? 3000 : 15000)
       }
     },
     confirm(app, rollback) {
-      if (this.busy(app) || (!rollback && (!this.ready(app) || this.unsupported || this.fetching))) return
+      if (this.submitting || this.busy(app) || (!rollback && (!this.ready(app) || this.unsupported || this.fetching))) return
+      this.bulk = false
       this.selected = { ...app }
       this.rollback = rollback
       this.actionError = ''
       this.confirmOpen = true
     },
+    confirmAll() {
+      if (!this.availableUpdates.length || this.submitting || this.fetching || this.unsupported || this.unavailable) return
+      this.bulk = true
+      this.rollback = false
+      this.selected = null
+      this.selectedApps = this.availableUpdates.map(app => ({ ...app }))
+      this.actionError = ''
+      this.confirmOpen = true
+    },
     async submit() {
-      if (this.submitting || !this.selected) return
+      if (this.submitting || this.disposed || !this.confirmOpen || (!this.bulk && !this.selected)) return
       this.submitting = true
       this.actionError = ''
+      this.bulkResult = ''
       try {
+        if (this.bulk) {
+          const results = await Promise.allSettled(this.selectedApps.map(async selected => {
+            await updates.update(selected.id, selected.update_token)
+            if (!this.disposed) {
+              this.$delete(this.submissionErrors, selected.id)
+              const app = this.apps.find(app => app.id === selected.id)
+              if (app) app.operation = 'preparing'
+            }
+          }))
+          if (this.disposed) return
+          let failed = 0
+          results.forEach((result, index) => {
+            if (result.status === 'rejected') {
+              failed++
+              this.$set(this.submissionErrors, this.selectedApps[index].id, this.message(result.reason))
+            }
+          })
+          this.bulkResult = failed
+            ? this.$t('Started {started} of {total} updates. Apps that could not start remain in the list.', { started: results.length - failed, total: results.length })
+            : this.$t('Started {count} app updates.', { count: results.length })
+          this.confirmOpen = false
+          await this.refresh(false)
+          return
+        }
         await (this.rollback ? updates.rollback(this.selected.id) : updates.update(this.selected.id, this.selected.update_token))
+        if (this.disposed) return
+        this.$delete(this.submissionErrors, this.selected.id)
         const app = this.apps.find(app => app.id === this.selected.id)
         if (app) app.operation = this.rollback ? 'reverting' : 'preparing'
         this.confirmOpen = false
@@ -224,6 +287,15 @@ export default {
 .updates-header { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 28px; }
 .updates-header h2 { font-size: 28px; font-weight: 700; letter-spacing: -.7px; line-height: 1.2; margin: 0 0 8px; }
 .updates-header p, .last-checked { color: var(--update-muted); font-size: 13px; }
+.header-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.update-all-button { white-space: nowrap; }
+.bulk-result { margin-bottom: 16px; font-size: 13px; color: var(--update-muted); }
+.bulk-app-list { margin: 16px 0; padding: 0; list-style: none; }
+.bulk-app-list li { display: flex; flex-direction: column; padding: 10px 0; border-bottom: 1px solid #e7ebf0; overflow-wrap: anywhere; }
+.bulk-app-list span { color: var(--update-muted); font-size: 13px; }
+.restore-history { margin-top: 28px; font-size: 13px; }
+.restore-history > summary { width: fit-content; color: var(--update-muted); cursor: pointer; }
+.restore-history .app-error { margin-left: 0; }
 .check-button, .update-button, .text-button { font: inherit; border: 0; cursor: pointer; transition: background .15s ease, color .15s ease; }
 .check-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; background: #f1f4f8; border-radius: 10px; color: #3e4d61; font-size: 13px; font-weight: 600; padding: 9px 14px; }
 .check-button:hover { background: #e6ecf3; }
@@ -249,7 +321,6 @@ export default {
 .update-button:hover { background: #d7e9ff; }
 button:disabled { cursor: default; opacity: .55; }
 button:focus-visible, summary:focus-visible { outline: 2px solid var(--update-blue); outline-offset: 4px; }
-.current-mark { display: block; margin-right: 24px; color: #558269; font-size: 20px; }
 .app-details { margin: 10px 0 0 76px; font-size: 12px; }
 .app-details summary { display: list-item; width: fit-content; color: var(--update-blue); cursor: pointer; padding: 3px 0; }
 .details-content { padding: 14px 16px; background: #f6f8fb; border-radius: 10px; margin-top: 10px; }
@@ -295,7 +366,6 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--update-bl
   .update-button { min-width: 76px; min-height: 36px; padding: 8px 12px; font-size: 13px; }
   .app-details, .app-note, .app-error { margin-left: 60px; }
   .app-progress { width: calc(100% - 60px); margin-left: 60px; }
-  .current-mark { margin-right: 12px; }
   .details-content { margin-left: -60px; }
 }
 </style>
