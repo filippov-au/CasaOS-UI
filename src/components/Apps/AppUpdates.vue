@@ -46,7 +46,8 @@
           </div>
           <div class="app-summary">
             <h4>{{ title(app) }}</h4>
-            <p v-if="busy(app)" class="app-version">{{ operationLabel(app.operation) }}</p>
+            <p v-if="busy(app)" class="app-version">{{ pinOnly(app) ? $t('Pinning version') : operationLabel(app.operation) }}</p>
+            <p v-else-if="ready(app) && pinOnly(app)" class="app-version">{{ app.current_version }} · {{ $t('Already installed') }}</p>
             <p v-else-if="ready(app) && app.target_version && app.current_version !== app.target_version" class="app-version">
               <span>{{ app.current_version || $t('Unknown') }}</span>
               <span class="version-arrow" aria-hidden="true">→</span>
@@ -56,9 +57,9 @@
             <p v-else class="app-version">{{ app.current_version || $t('Unknown') }}<span v-if="app.check_status === 'up_to_date'"> · {{ $t('Up to date') }}</span></p>
           </div>
           <div class="update-actions">
-            <button v-if="ready(app) || busy(app)" class="update-button" :disabled="busy(app) || fetching || submitting || unsupported || unavailable" :aria-label="$t('Update') + ' ' + title(app)" :aria-busy="busy(app)" @click="confirm(app, false)">
+            <button v-if="ready(app) || busy(app)" class="update-button" :disabled="busy(app) || fetching || submitting || unsupported || unavailable" :aria-label="$t(pinOnly(app) ? 'Pin version' : 'Update') + ' ' + title(app)" :aria-busy="busy(app)" @click="confirm(app, false)">
               <span v-if="busy(app)" class="button-spinner" aria-hidden="true" />
-              {{ $t(busy(app) ? 'Updating' : 'Update') }}
+              {{ $t(busy(app) ? (pinOnly(app) ? 'Pinning' : 'Updating') : (pinOnly(app) ? 'Pin version' : 'Update')) }}
             </button>
             <span v-else-if="app.check_status === 'up_to_date'" class="current-mark" :aria-label="$t('Up to date')">✓</span>
           </div>
@@ -72,13 +73,13 @@
         <details v-if="(app.registry_images || []).length || app.rollback_version" class="app-details">
           <summary>{{ $t('Details') }}</summary>
           <div class="details-content">
-            <p v-if="ready(app)" class="details-note">{{ $t('Updates the app images. Your settings and data are kept.') }}</p>
+            <p v-if="ready(app)" class="details-note">{{ $t(pinOnly(app) ? 'The same images are already installed. Pin their numbered versions for future updates.' : 'Updates the app images. Your settings and data are kept.') }}</p>
             <div v-for="image in app.registry_images || []" :key="image.service" class="image-detail">
               <h5>{{ image.service }}</h5>
               <p><span>{{ $t('Installed') }}</span><strong>{{ imageVersion(image.current_version, image.current_image_id) }}</strong></p>
-              <p v-if="image.latest_image"><span>{{ $t('Update') }}</span><strong>{{ imageVersion(image.latest_version, image.latest_image_id) }}</strong></p>
+              <p v-if="image.latest_image"><span>{{ $t(sameImage(image) ? 'Version' : 'Update') }}</span><strong>{{ imageVersion(image.latest_version, image.latest_image_id) }}</strong></p>
               <p><span>{{ $t('Image') }}</span><code>{{ image.installed_image || image.image }}</code></p>
-              <p v-if="image.latest_image && image.latest_image !== (image.installed_image || image.image)"><span>{{ $t('New image') }}</span><code>{{ image.latest_image }}</code></p>
+              <p v-if="image.latest_image && image.latest_image !== (image.installed_image || image.image)"><span>{{ $t(sameImage(image) ? 'Pinned image' : 'New image') }}</span><code>{{ image.latest_image }}</code></p>
               <p v-if="image.error" class="app-error">{{ image.error }}</p>
             </div>
             <div v-if="app.rollback_version" class="restore-row">
@@ -93,17 +94,19 @@
 
     <b-modal :active.sync="confirmOpen" has-modal-card trap-focus :can-cancel="!submitting">
       <div class="modal-card update-confirmation">
-        <header class="modal-card-head"><h3 class="modal-card-title">{{ $t(rollback ? 'Revert to previous version' : 'Update app') }}</h3></header>
+        <header class="modal-card-head"><h3 class="modal-card-title">{{ $t(rollback ? 'Revert to previous version' : pinOnly(selected) ? 'Pin current version' : 'Update app') }}</h3></header>
         <section class="modal-card-body">
           <p class="confirmation-app">{{ selected ? title(selected) : '' }}</p>
-          <p v-if="selected" class="confirmation-version">{{ selected.current_version }} <span aria-hidden="true">→</span> {{ rollback ? selected.rollback_version : selected.target_version }}</p>
-          <p>{{ $t('The app may briefly stop. Current app data will be kept. Reverting the app version cannot undo database changes made by an update.') }}</p>
+          <p v-if="selected && !rollback && pinOnly(selected)" class="confirmation-version">{{ selected.current_version }} · {{ $t('Already installed') }}</p>
+          <p v-else-if="selected" class="confirmation-version">{{ selected.current_version }} <span aria-hidden="true">→</span> {{ rollback ? selected.rollback_version : selected.target_version }}</p>
+          <p v-if="!rollback && pinOnly(selected)">{{ $t('This saves a numbered image reference. The software version stays the same. The app may briefly stop; your settings and data are kept.') }}</p>
+          <p v-else>{{ $t('The app may briefly stop. Current app data will be kept. Reverting the app version cannot undo database changes made by an update.') }}</p>
           <p v-if="rollback" class="mt-3">{{ $t('App settings will also return to their saved values.') }}</p>
           <p v-if="actionError" class="app-error mt-3" role="alert">{{ actionError }}</p>
         </section>
         <footer class="modal-card-foot">
           <button class="check-button" :disabled="submitting" @click="confirmOpen = false">{{ $t('Cancel') }}</button>
-          <button class="update-button confirm-button" :disabled="submitting" :aria-busy="submitting" @click="submit">{{ $t(submitting ? 'Starting' : rollback ? 'Restore' : 'Update') }}</button>
+          <button class="update-button confirm-button" :disabled="submitting" :aria-busy="submitting" @click="submit">{{ $t(submitting ? 'Starting' : rollback ? 'Restore' : pinOnly(selected) ? 'Pin version' : 'Update') }}</button>
         </footer>
       </div>
     </b-modal>
@@ -126,7 +129,8 @@ export default {
       const pending = app => this.ready(app) || this.busy(app)
       const attention = app => Boolean(app.check_error || app.error || ['failed', 'unmanaged'].includes(app.check_status))
       return [
-        { id: 'available', title: 'Available updates', apps: sorted.filter(pending) },
+        { id: 'available', title: 'Available updates', apps: sorted.filter(app => pending(app) && !this.pinOnly(app)) },
+        { id: 'pins', title: 'Version pinning', apps: sorted.filter(app => pending(app) && this.pinOnly(app)) },
         { id: 'attention', title: 'Needs attention', apps: sorted.filter(app => !pending(app) && attention(app)) },
         { id: 'current', title: 'Installed apps', apps: sorted.filter(app => !pending(app) && !attention(app)) },
       ].filter(group => group.apps.length)
@@ -134,10 +138,11 @@ export default {
     lastChecked() { return this.apps.map(app => app.checked_at).filter(Boolean).sort().pop() },
     overviewText() {
       if (this.checking) return this.$t('Looking for updates…')
-      const count = this.apps.filter(this.ready).length
+      const count = this.apps.filter(app => this.ready(app) && !this.pinOnly(app)).length
       if (count === 1) return this.$t('1 update available')
       if (count) return this.$t('{count} updates available', { count })
-      if (this.apps.some(this.busy)) return this.$t('Updating your apps…')
+      if (this.apps.some(this.busy)) return this.$t(this.apps.filter(this.busy).every(this.pinOnly) ? 'Pinning versions…' : 'Updating your apps…')
+      if (this.apps.some(app => this.ready(app) && this.pinOnly(app))) return this.$t('Installed versions can be pinned')
       if (this.apps.length && this.apps.every(app => app.check_status === 'up_to_date')) return this.$t('All apps are up to date')
       return this.$t('Your apps')
     },
@@ -148,6 +153,8 @@ export default {
   },
   beforeDestroy() { this.disposed = true; clearTimeout(this.timer) },
   methods: {
+    sameImage: image => Boolean(image.current_image_id) && image.current_image_id === image.latest_image_id,
+    pinOnly: app => app?.update_kind === 'pin',
     imageVersion(version, id) {
       if (version && !['latest', 'stable', 'main', 'master', 'nightly'].includes(version)) return version
       return id ? this.$t('Build {id}', { id: id.replace(/^sha256:/, '').slice(0, 12) }) : this.$t('Unknown')
@@ -250,7 +257,7 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--update-bl
 .image-detail + .image-detail { margin-top: 16px; }
 .image-detail h5 { font-size: 12px; font-weight: 650; margin-bottom: 6px; }
 .image-detail p { display: flex; gap: 10px; margin-top: 4px; }
-.image-detail p > span { flex: 0 0 56px; color: var(--update-muted); }
+.image-detail p > span { flex: 0 0 76px; color: var(--update-muted); }
 .image-detail strong { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
 .image-detail code { padding: 0; background: transparent; color: #455970; overflow-wrap: anywhere; min-width: 0; font-size: 11px; }
 .app-error { color: #aa3b3b; font-size: 13px; line-height: 1.5; margin: 10px 0 0 76px; overflow-wrap: anywhere; }

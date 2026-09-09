@@ -496,5 +496,17 @@
   "Updates the app images. Your settings and data are kept.": "Updates the app images. Your settings and data are kept.",
   "Image": "Image",
   "New image": "New image",
-  "Build {id}": "Build {id}"
+  "Build {id}": "Build {id}",
+  "Pin version": "Pin version",
+  "Pin current version": "Pin current version",
+  "Pinning": "Pinning",
+  "Pinning version": "Pinning version",
+  "Already installed": "Already installed",
+  "Version pinning": "Version pinning",
+  "Installed versions can be pinned": "Installed versions can be pinned",
+  "Pinning versions…": "Pinning versions…",
+  "Version": "Version",
+  "Pinned image": "Pinned image",
+  "The same images are already installed. Pin their numbered versions for future updates.": "The same images are already installed. Pin their numbered versions for future updates.",
+  "This saves a numbered image reference. The software version stays the same. The app may briefly stop; your settings and data are kept.": "This saves a numbered image reference. The software version stays the same. The app may briefly stop; your settings and data are kept."
 }
