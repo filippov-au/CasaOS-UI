@@ -153,9 +153,9 @@ const api = {
 		url = testVisionNum(url)
 		return instance.delete(url, { data: data })
 	},
-	patch(url, data) {
+	patch(url, data, config) {
 		url = testVisionNum(url)
-		return instance.patch(url, data)
+		return instance.patch(url, data, config)
 	},
 }
 export { api, instance }
