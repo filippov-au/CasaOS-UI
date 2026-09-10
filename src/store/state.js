@@ -18,10 +18,7 @@ const state = {
   sidebarOpen: false,
 
   // System Config
-  searchEngine: '',
-  searchEngineSwitch: true,
   existingAppsSwitch: true,
-  recommendSwitch: true,
   rssSwitch: false,
 
   siteLoading: true,

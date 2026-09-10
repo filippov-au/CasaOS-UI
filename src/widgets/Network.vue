@@ -55,9 +55,6 @@ export default {
 	mixins: [mixin],
 	// eslint-disable-next-line vue/multi-word-component-names
 	name: 'network',
-	icon: "network-outline",
-	title: "Network Status",
-	initShow: true,
 	components: {
 		VueApexCharts: () => import("vue-apexcharts")
 	},

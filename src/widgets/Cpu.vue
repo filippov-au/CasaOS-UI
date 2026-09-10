@@ -72,9 +72,6 @@ import RadialBar from "@/components/widgets/RadialBar.vue";
 export default {
 	// eslint-disable-next-line vue/multi-word-component-names
 	name: "cpu",
-	icon: "system-outline",
-	title: "System Status",
-	initShow: true,
 	mixins: [smoothReflow, mixin],
 	components: {
 		RadialBar,

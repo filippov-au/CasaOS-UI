@@ -33,6 +33,8 @@ export default {
       isRestarting: false,
       isStarting: false,
       isRebuilding: false,
+      // Percentage of the running install, update or rebuild, null when nothing is in flight.
+      progress: null,
       // isStoping: false,
       // Public. Only changes the state of the card, not the state of the button.
       isSaving: false,
@@ -615,8 +617,32 @@ export default {
      * @param {object} data
      * @return {void}
      */
-    'app:update-begin': function () {
+    'app:update-begin': function (data) {
+      if (data.Properties['app:name'] !== this.item.name)
+        return
+      this.isUpdating = true
+      this.progress = 0
+    },
 
+    'app:update-error': function (data) {
+      if (data.Properties['app:name'] !== this.item.name)
+        return
+      this.isUpdating = false
+      this.progress = null
+    },
+
+    /**
+     * @description: Pull progress of an install, update or rebuild
+     * @param {object} data
+     * @return {void}
+     */
+    'app:install-progress': function (data) {
+      if (data.Properties['app:name'] !== this.item.name)
+        return
+      const progress = Number(data.Properties['app:progress'])
+      if (Number.isFinite(progress)) {
+        this.progress = Math.min(100, Math.max(0, Math.round(progress)))
+      }
     },
 
     'docker:image:pull-end': function (data) {
@@ -642,10 +668,11 @@ export default {
     'app:update-end': function (data) {
       if (data.Properties['app:name'] !== this.item.name)
         return
+      this.isUpdating = false
+      this.progress = null
       if (data.Properties['docker:image:updated'] === 'true') {
         return
       }
-      this.isUpdating = false
       this.$buefy.toast.open({
         message: this.$t(`{appName} is the latest version!`, { appName: this.item.name }),
         type: 'is-success',
@@ -653,6 +680,9 @@ export default {
       })
     },
     'app:install-end': function (res) {
+      if (res.Properties['app:name'] === this.item.name) {
+        this.progress = null
+      }
       if (res.Properties['dry_run.name'] === this.item.name) {
         // 4.sockiet :: install-end :: change UI status.
         this.isRebuilding = false
@@ -664,6 +694,9 @@ export default {
       }
     },
     'app:install-error': function (res) {
+      if (res.Properties['app:name'] === this.item.name) {
+        this.progress = null
+      }
       if (res.Properties['dry_run.name'] === this.item.name) {
         // 4.sockiet :: install-end :: change UI status.
         this.isRebuilding = false
@@ -822,9 +855,49 @@ export default {
         </div>
       </b-tooltip>
       <!-- Card Content End -->
+      <!-- Update Progress Start -->
+      <div
+        v-if="progress !== null" aria-valuemax="100" aria-valuemin="0" :aria-valuenow="progress" class="app-progress"
+        role="progressbar"
+      >
+        <span class="app-progress-text">{{ progress }}%</span>
+        <div class="app-progress-track">
+          <div class="app-progress-fill" :style="{ width: `${progress}%` }" />
+        </div>
+      </div>
+      <!-- Update Progress End -->
     </div>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.app-progress {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.5rem;
+  left: 0.75rem;
+  z-index: 10;
+  font-family: $family-sans-serif;
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  text-align: center;
+  color: $white;
+}
+
+.app-progress-track {
+  height: 0.25rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 0.125rem;
+}
+
+.app-progress-fill {
+  height: 100%;
+  background: $white;
+  border-radius: inherit;
+  transition: width 0.3s ease;
+}
+</style>
 
 <style lang="scss">
 .pb-3px {

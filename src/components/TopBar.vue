@@ -29,11 +29,6 @@ export default {
       // System
       barData: {
         lang: this.getInitLang(),
-        search_engine: 'https://duckduckgo.com/?q=',
-        search_switch: true,
-        recommend_switch: true,
-        shortcuts_switch: false, // Not used
-        widgets_switch: false, // Not used
         existing_apps_switch: true,
         rss_switch: false,
       },
@@ -55,14 +50,6 @@ export default {
         lang: key,
         name: value.lang_name,
       })),
-      // Search Engine Sets
-      searchEngines: [
-        { url: 'https://duckduckgo.com/?q=', name: 'DuckDuckGo' },
-        { url: 'https://www.google.com/search?q=', name: 'Google' },
-        { url: 'https://www.bing.com/search?q=', name: 'Bing' },
-        { url: 'https://www.startpage.com/do/search?cat=web&pl=chrome&query=', name: 'StartPage' },
-        { url: 'https://search.brave.com/search?source=web&q=', name: 'Brave' },
-      ],
       restart: 'Restart',
       shutdown: 'Shutdown',
       showPower: false,
@@ -98,33 +85,6 @@ export default {
         const lang = val.includes('_') ? val : 'en_us'
         this.$messageBus('dashboardsetting_language', lang)
         this.setLang(lang)
-      },
-      deep: true,
-    },
-    'barData.search_engine': {
-      handler(val, oldValue) {
-        if (val === oldValue) {
-          return
-        }
-        this.$messageBus('dashboardsetting_searchengine', val.toString())
-        this.$store.commit('SET_SEARCH_ENGINE', val)
-      },
-      deep: true,
-    },
-    'barData.search_switch': {
-      handler(val, oldValue) {
-        if (val === oldValue) {
-          return
-        }
-        this.$messageBus('dashboardsetting_showsearchbar', val.toString())
-        this.$store.commit('SET_SEARCH_ENGINE_SWITCH', val)
-      },
-      deep: true,
-    },
-
-    'barData.recommend_switch': {
-      handler(val) {
-        this.$store.commit('SET_RECOMMEND_SWITCH', val)
       },
       deep: true,
     },
@@ -539,53 +499,6 @@ export default {
           <h2 class="_title mb-4 has-text-weight-bold">
             {{ $t("Settings") }}
           </h2>
-          <!-- Search Engine Switch Start  -->
-          <div
-            class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
-          >
-            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-              <b-icon class="mr-1 ml-2" icon="show-search-outline" pack="casa" size="is-20" />
-              {{ $t("Show Search Bar") }}
-            </div>
-            <div>
-              <b-field>
-                <b-switch
-                  v-model="barData.search_switch"
-                  class="is-flex-direction-row-reverse mr-0 _small"
-                  type="is-dark"
-                  @input="saveData"
-                />
-              </b-field>
-            </div>
-          </div>
-          <!-- Search Engine Switch End  -->
-
-          <!-- Search Engine Start -->
-          <div
-            v-if="barData.search_switch"
-            class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
-          >
-            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-              <b-icon class="mr-1 ml-2" icon="search-outline" pack="casa" size="is-20" />
-              {{ $t("Search Engine") }}
-            </div>
-            <div>
-              <b-field>
-                <b-select
-                  v-model="barData.search_engine"
-                  class="set-select"
-                  size="is-small"
-                  @input="saveData"
-                >
-                  <option v-for="item in searchEngines" :key="item.name" :value="item.url">
-                    {{ item.name }}
-                  </option>
-                </b-select>
-              </b-field>
-            </div>
-          </div>
-          <!-- Search Engine End -->
-
           <!-- Language Start -->
           <div
             class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
@@ -684,31 +597,6 @@ export default {
             </div>
           </div>
           <!--  Show other Docker container app(s) Switch End  -->
-          <!--  Recommended modules Switch Start  -->
-          <div
-            class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
-          >
-            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-              <b-icon
-                class="mr-1 ml-2"
-                icon="display-applications-outline"
-                pack="casa"
-                size="is-20"
-              />
-              {{ $t("Show Recommended Apps") }}
-            </div>
-            <div>
-              <b-field>
-                <b-switch
-                  v-model="barData.recommend_switch"
-                  class="is-flex-direction-row-reverse mr-0 _small"
-                  type="is-dark"
-                  @input="saveData"
-                />
-              </b-field>
-            </div>
-          </div>
-          <!-- Recommended modules Switch End  -->
 
           <!-- Automount USB Drive Start  -->
           <div

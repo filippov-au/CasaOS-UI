@@ -77,9 +77,6 @@ import { mixin } from '@/mixins/mixin';
 export default {
 	// eslint-disable-next-line vue/multi-word-component-names
 	name: 'disks',
-	icon: "storage-outline",
-	title: "Storage Status",
-	initShow: true,
 	mixins: [mixin],
 
 	data() {

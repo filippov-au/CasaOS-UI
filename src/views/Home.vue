@@ -1,9 +1,7 @@
 <script>
 import { nanoid } from 'nanoid'
-import SearchBar from '@/components/SearchBar.vue'
 import SideBar from '@/components/SideBar.vue'
 import TopBar from '@/components/TopBar.vue'
-import CoreService from '@/components/CoreService.vue'
 import AppSection from '@/components/Apps/AppSection.vue'
 import FilePanel from '@/components/filebrowser/FilePanel.vue'
 import UpdateCompleteModal from '@/components/settings/UpdateCompleteModal.vue'
@@ -16,10 +14,8 @@ export default {
   name: 'HomePage',
   components: {
     SideBar,
-    SearchBar,
     AppSection,
     TopBar,
-    CoreService,
     FilePanel,
   },
   mixins: [mixin],
@@ -46,9 +42,6 @@ export default {
     sidebarOpen() {
       return this.$store.state.sidebarOpen
     },
-    searchbarShow() {
-      return this.$store.state.searchEngineSwitch
-    },
   },
   created() {
     this.getHardwareInfo()
@@ -71,14 +64,9 @@ export default {
       sessionStorage.removeItem('fromWelcome')
     }
     this.$messageBus('global_visit')
-
-    this.$EventBus.$on('casaUI:openStorageManager', () => {
-      this.showStorageManagerPanelModal()
-    })
   },
   beforeUnmount() {
     window.removeEventListener('resize', this.onResize)
-    this.$EventBus.$off('casaUI:openStorageManager')
   },
   methods: {
 
@@ -92,11 +80,6 @@ export default {
       if (systemConfig.data.success != 200 || systemConfig.data.data == '') {
         const barData = {
           lang: this.getLangFromBrowser(),
-          search_engine: 'https://duckduckgo.com/?q=',
-          search_switch: true,
-          recommend_switch: true,
-          shortcuts_switch: true,
-          widgets_switch: true,
           existing_apps_switch: true,
           rss_switch: this.barData.rss_switch,
         }
@@ -108,8 +91,6 @@ export default {
         }
       }
 
-      this.$store.commit('SET_SEARCH_ENGINE_SWITCH', systemConfig.data.data.search_switch)
-      this.$store.commit('SET_RECOMMEND_SWITCH', systemConfig.data.data.recommend_switch)
       this.$store.commit('SET_RSS_SWITCH', systemConfig.data.data.rss_switch)
       this.barData = systemConfig.data.data
       this.isLoading = false
@@ -223,21 +204,6 @@ export default {
       })
     },
 
-    // show storage settings modal
-    async showStorageManagerPanelModal() {
-      this.$messageBus('widget_storagemanager')
-      this.$buefy.modal.open({
-        parent: this,
-        component: () => import('@/components/Storage/StorageManagerPanel.vue'),
-        hasModalCard: true,
-        customClass: 'storage-modal',
-        trapFocus: true,
-        canCancel: [],
-        scroll: 'keep',
-        animation: 'zoom-in',
-      })
-    },
-
   },
 
 }
@@ -261,22 +227,6 @@ export default {
           <div :class="{ open: sidebarOpen }" class="column is-three-quarters main-content">
             <!-- MainContent Start -->
             <div class=" contextmenu-canvas">
-              <!-- SearchBar Start -->
-              <section>
-                <transition name="fade">
-                  <SearchBar v-if="searchbarShow" />
-                </transition>
-              </section>
-              <!-- SearchBar End -->
-
-              <!-- core-service Start -->
-              <section>
-                <transition name="fade">
-                  <CoreService />
-                </transition>
-              </section>
-              <!-- core-service End -->
-
               <!-- Apps Start -->
               <section>
                 <AppSection ref="apps" />

@@ -545,7 +545,8 @@ export default {
 		 * @return {void}
 		 */
 		'app:update-end' (data) {
-			if (data.Properties['docker:image:updated'] === 'true') {
+			const updated = data.Properties['docker:image:updated'] === 'true'
+			if (updated) {
 				// business :: Tagging of new app / scrollIntoView
 				this.addIdToSessionStorage(data.Properties['app:name'])
 
@@ -555,10 +556,12 @@ export default {
 					}),
 					type: 'is-success'
 				})
-				this.getList().then(() => {
-					this.scrollToNewApp()
-				})
 			}
+			this.getList().then(() => {
+				if (updated) {
+					this.scrollToNewApp()
+				}
+			})
 		},
 		'app:update-error' (data) {
 			if (data.Properties.cid === this.item.id) {
