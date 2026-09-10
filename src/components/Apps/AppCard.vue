@@ -847,11 +847,6 @@ export default {
             <!-- Loading Bar End -->
           </div>
 
-          <p class="mt-3 one-line">
-            <a class="one-line" style="cursor:default">
-              {{ i18n(item.title) }}
-            </a>
-          </p>
         </div>
       </b-tooltip>
       <!-- Card Content End -->

@@ -8,8 +8,6 @@
 				<div class="is-flex is-justify-content-center">
 					<b-image :src="require('@/assets/img/app/sk_icon.svg')" class="is-64x64"></b-image>
 				</div>
-				<div class="sk-line mt-3"></div>
-
 			</div>
 			<!-- Card Content End -->˝
 		</div>
@@ -61,13 +59,6 @@ export default {
 
 	&:hover {
 		box-shadow: none
-	}
-
-	.sk-line {
-		width: 4.5rem;
-		height: 0.75rem;
-		border-radius: 0.25rem;
-		background-color: rgba(133, 149, 163, 0.6);
 	}
 }
 </style>
