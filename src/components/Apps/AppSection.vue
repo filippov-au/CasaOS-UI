@@ -1,7 +1,7 @@
 <template>
 	<div class="home-section has-text-left">
 		<!-- Title Bar Start -->
-		<div class="is-flex is-align-items-center mb-4">
+		<div class="app-section-header is-flex is-align-items-center">
 			<app-section-title-tip
 				id="appTitle1"
 				class="is-flex-grow-1 has-text-sub-04"
@@ -577,6 +577,13 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.app-section-header {
+	// Fixed height keeps the widget column offset in SideBar.vue lined up with
+	// the first row of app tiles.
+	height: $app-section-header-height;
+	margin-bottom: $app-section-header-gap;
+}
+
 .app-list {
 	position: relative;
 	display: grid;

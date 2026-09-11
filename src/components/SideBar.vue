@@ -69,12 +69,16 @@ export default {
     height: calc(var(--vh, 1vh) * 100 - 6rem);
     overflow: inherit !important;
     position: fixed;
+    // Line the widgets up with the first row of app tiles, not with the app
+    // section header that sits above them.
+    padding-top: $app-section-header-height + $app-section-header-gap;
 
     @include until(480px) {
         z-index: 20;
         left: 0rem;
         width: auto;
         margin: 0 0 0 1rem !important;
+        padding-top: 0;
         transform: translateX(-100vw);
         transition: all 0.3s ease-in-out;
 
