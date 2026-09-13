@@ -146,3 +146,14 @@ it('recovers from a failed settings refresh without losing an existing conversat
   expect(wrapper.vm.canSend).toBe(true)
   expect(wrapper.vm.draft).toBe('Continue')
 })
+
+it('shows only safe verified tool links and refreshes cards once for new publication events', async () => {
+  mount(); await flush(); const emit = vi.fn(); wrapper.vm.$EventBus = { $emit: emit }
+  const updated = { ...view('done'), events: [{ kind: 'tool', tool: 'publish_app', text: 'Verified', url: 'https://app.example.com/path', card_updated: true }] }
+  wrapper.vm.acceptSession(updated); await flush()
+  const link = wrapper.find('.verified-app-link'); expect(link.attributes('href')).toBe('https://app.example.com/path'); expect(link.attributes('rel')).toContain('noopener'); expect(emit).toHaveBeenCalledTimes(1)
+  wrapper.vm.acceptSession(updated); expect(emit).toHaveBeenCalledTimes(1)
+  expect(wrapper.vm.verifiedURL({ kind: 'tool', tool: 'publish_app', url: 'javascript:alert(1)' })).toBe('')
+  expect(wrapper.vm.verifiedURL({ kind: 'tool', tool: 'app_logs', url: 'https://evil.example' })).toBe('')
+  expect(wrapper.vm.verifiedURL({ kind: 'tool', tool: 'publish_app', url: 'https://user:pass@example.com' })).toBe('')
+})

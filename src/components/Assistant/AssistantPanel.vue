@@ -45,6 +45,7 @@
           <article v-for="(event, index) in session.events" :key="index" :class="['assistant-event', event.kind]">
             <template v-if="event.kind === 'tool' || event.kind === 'action'"><details><summary><b-icon :icon="event.kind === 'action' ? 'cog-outline' : 'check-circle-outline'" size="is-small" />{{ event.kind === 'action' ? 'Action' : 'Result' }} · {{ toolLabel(event.tool) }}</summary><pre>{{ event.text }}</pre></details></template>
             <template v-else><p v-if="event.kind !== 'user'" class="event-label">{{ event.kind === 'assistant' ? 'Casa AI' : 'Activity' }}</p><p class="event-text">{{ event.text }}</p></template>
+          <a v-if="verifiedURL(event)" class="verified-app-link" :href="verifiedURL(event)" target="_blank" rel="noopener noreferrer">Open app ↗ <span>{{ verifiedURL(event) }}</span></a>
           </article>
           <div v-if="running" class="assistant-working" role="status"><span class="status-dot connected" />Working through your request…</div>
         </div>
@@ -63,6 +64,7 @@
 
 <script>
 import assistant from '@/service/assistant'
+import events from '@/events/events'
 
 export default {
   name: 'AssistantPanel',
@@ -101,6 +103,10 @@ export default {
   async mounted() { if (this.inspectionOnly) this.mode = 'read'; await this.load() },
   beforeDestroy() { this.disposed = true; clearTimeout(this.pollTimer); this.credentialValue = '' },
   methods: {
+    verifiedURL(event) {
+      if (event.kind !== 'tool' || !['publish_app', 'check_app_url'].includes(event.tool) || !event.url) return ''
+      try { const url = new URL(event.url); return url.protocol === 'https:' && !url.username && !url.password ? url.href : '' } catch { return '' }
+    },
     composerEnter(event) { if (event.isComposing) return; event.preventDefault(); this.send() },
     isConnected(id) { return this.connections.some(c => c.provider === id && c.configured) },
     formatContext(count) { return count >= 1000000 ? `${+(count / 1000000).toFixed(1)}M` : `${Math.round(count / 1000)}K` },
@@ -155,6 +161,8 @@ export default {
     },
     acceptSession(session) {
       if (this.disposed) return
+      const previousCount = this.session?.id === session.id ? this.session.events.length : 0
+      if (session.events.slice(previousCount).some(event => event.card_updated && this.verifiedURL(event))) this.$EventBus?.$emit(events.RELOAD_APP_LIST)
       this.session = session; this.mode = session.mode
       sessionStorage.setItem(this.storageKey, session.id)
       const existing = this.topics.find(t => t.id === session.id)
@@ -215,6 +223,8 @@ export default {
 </script>
 
 <style scoped>
+.verified-app-link { display: block; margin: 10px 0; padding: 12px 14px; border: 1px solid #d6e5db; border-radius: 10px; background: #f4f9f6; color: #24553b; font-weight: 600; }
+.verified-app-link span { display: block; margin-top: 4px; font-size: 12px; font-weight: 400; overflow-wrap: anywhere; }
 .model-trigger { display:flex; align-items:center; gap:10px; border:0; background:#f6f6f5; border-radius:8px; padding:8px 11px; color:#5d655f; max-width:60%; font-size:12px !important; text-align:left; }
 .model-picker { position:absolute; top:70px; right:28px; z-index:5; width:min(410px,calc(100% - 28px)); background:white; border:1px solid #e3e5e2; border-radius:14px; padding:18px; box-shadow:0 14px 50px #17251d21; }
 .model-picker h2 { font-size:15px; font-weight:500; }.model-picker input { width:100%; padding:11px; border:1px solid #dedede; border-radius:8px; background:#fafaf9; }.model-results { max-height:350px; overflow:auto; margin:12px -6px; }.model-group h3 { font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:#8b938c; padding:12px 9px 5px; }.model-group button { display:flex; justify-content:space-between; align-items:center; gap:12px; width:100%; padding:10px; border:0; border-radius:7px; background:white; color:#353a36; text-align:left; font-size:12px; }.model-group button:hover,.model-group button[aria-pressed="true"] { background:#f2f5f1; }.model-group small { display:block; font-size:10px; color:#969c96; margin-top:4px; }.catalog-credit { color:#a1a6a1; font-size:10px; margin-top:16px; }

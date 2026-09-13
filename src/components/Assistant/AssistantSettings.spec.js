@@ -81,3 +81,10 @@ it('keeps the dialog open until verification finishes and clears key drafts on d
   wrapper.destroy()
   expect(wrapper.vm.apiKey).toBe('')
 })
+
+it('keeps settings open while the NPM connection is being saved', async () => {
+  mount(); await flush(); await wrapper.setData({ npmBusy: true })
+  expect(wrapper.find('.settings-close').attributes('disabled')).toBeDefined()
+  expect(wrapper.find('footer button').attributes('disabled')).toBeDefined()
+  expect(wrapper.attributes('aria-busy')).toBe('true')
+})

@@ -3,6 +3,11 @@ import { api } from './service'
 const root = '/v2/app_management/assistant'
 const session = id => `${root}/sessions/${encodeURIComponent(id)}`
 export default {
+  npmDiscover: () => api.get(`${root}/npm/discovery`),
+  npmSettings: () => api.get(`${root}/npm`),
+  npmVerify: connection => api.post(`${root}/npm/verify`, connection),
+  npmSave: connection => api.put(`${root}/npm`, connection),
+  npmDisconnect: () => api.delete(`${root}/npm`),
   list: () => api.get(`${root}/sessions`),
   settings: () => api.get(`${root}/settings`),
   saveSettings: settings => api.put(`${root}/settings`, settings),

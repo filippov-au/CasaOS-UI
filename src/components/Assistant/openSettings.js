@@ -6,7 +6,7 @@ export default function openAssistantSettings(parent, options = {}) {
     width: 640,
     ariaLabel: parent.$t('AI settings'),
     canCancel: ['escape'],
-    canDismiss: modal => !modal.$children[0]?.busy,
+    canDismiss: modal => !modal.$children[0]?.busy && !modal.$children[0]?.npmBusy,
     ...options,
   })
 }

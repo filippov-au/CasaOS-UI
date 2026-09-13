@@ -1,11 +1,11 @@
 <template>
-  <section class="assistant-settings modal-card" aria-labelledby="ai-settings-title" :aria-busy="busy">
+  <section class="assistant-settings modal-card" aria-labelledby="ai-settings-title" :aria-busy="busy || npmBusy">
     <header class="modal-card-head">
       <div>
         <h2 id="ai-settings-title">{{ $t('AI settings') }}</h2>
         <p>{{ $t('Connect once. Choose your model in chat.') }}</p>
       </div>
-      <button type="button" class="settings-close" :disabled="busy" :aria-label="$t('Close AI settings')" @click="$emit('close')">×</button>
+      <button type="button" class="settings-close" :disabled="busy || npmBusy" :aria-label="$t('Close AI settings')" @click="$emit('close')">×</button>
     </header>
     <section class="modal-card-body">
       <div v-if="error" class="settings-error" role="alert">
@@ -37,24 +37,27 @@
           <p v-if="notice" class="settings-success" role="status">{{ notice }}</p>
         </form>
         <p class="catalog-credit">{{ catalogSource }}</p>
+        <NPMSettings @busy="npmBusy = $event" />
       </template>
     </section>
     <footer class="modal-card-foot">
-      <button type="button" class="button is-small is-rounded" :disabled="busy" @click="$emit('close')">{{ $t('Done') }}</button>
+      <button type="button" class="button is-small is-rounded" :disabled="busy || npmBusy" @click="$emit('close')">{{ $t('Done') }}</button>
     </footer>
   </section>
 </template>
 
 <script>
 import assistant from '@/service/assistant'
+import NPMSettings from './NPMSettings.vue'
 
 export default {
   name: 'AssistantSettings',
+  components: { NPMSettings },
   data: () => ({
     settings: { provider: 'deepseek', model: '', configured: false },
     presets: [], connections: [], connectingProvider: '', apiKey: '',
     catalogSource: 'Models.dev', loaded: false, busy: false, saving: false,
-    error: '', notice: '', disposed: false,
+    error: '', notice: '', disposed: false, npmBusy: false,
   }),
   computed: {
     connectingPreset() { return this.presets.find(p => p.id === this.connectingProvider) },

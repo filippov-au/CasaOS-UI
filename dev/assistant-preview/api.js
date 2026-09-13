@@ -7,6 +7,11 @@ async function call(method, path, body) {
 }
 const session = id => '/sessions/' + encodeURIComponent(id)
 export default {
+  npmDiscover: () => call('GET', '/npm/discovery'),
+  npmSettings: () => call('GET', '/npm'),
+  npmVerify: body => call('POST', '/npm/verify', body),
+  npmSave: body => call('PUT', '/npm', body),
+  npmDisconnect: () => call('DELETE', '/npm'),
   settings: () => call('GET', '/settings'),
   saveSettings: body => call('PUT', '/settings', body),
   disconnect: provider => call('DELETE', '/connections/' + encodeURIComponent(provider)),
