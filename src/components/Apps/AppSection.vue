@@ -1,98 +1,101 @@
 <template>
-	<div class="home-section has-text-left">
-		<!-- Title Bar Start -->
-		<div class="app-section-header is-flex is-align-items-center">
-			<app-section-title-tip
-				id="appTitle1"
-				class="is-flex-grow-1 has-text-sub-04"
-				label="Drag icons to sort."
-				title="Apps"
-			>
-			</app-section-title-tip>
-
-			<button class="button is-small is-dark is-rounded assistant-launcher mr-3" type="button" :aria-label="$t('Open AI assistant')" @click="showAssistantPanel">
-				<b-icon icon="creation" size="is-small" /><span>{{ $t('AI assistant') }}</span>
-			</button>
-
-			<b-dropdown animation="fade1" aria-role="menu" class="file-dropdown" position="is-bottom-left">
-				<template #trigger>
-					<b-icon
-						class="polymorphic is-clickable has-text-grey-100"
-						icon="plus-outline"
-						pack="casa"
-						size="is-24"
-					></b-icon>
-				</template>
-				<b-dropdown-item aria-role="menuitem" @click="showInstall(0, 'custom')">
-					{{ $t('Custom Install APP') }}
-				</b-dropdown-item>
-				<b-dropdown-item aria-role="menuitem" @click="showExternalLinkPanel">
-					{{ $t('Add external link/APP') }}
-				</b-dropdown-item>
-			</b-dropdown>
-		</div>
-		<!-- Title Bar End -->
-
-		<!-- App List Start -->
-		<draggable
-			v-model="appList"
-			:draggable="draggable"
-			class="app-list contextmenu-canvas"
-			tag="div"
-			v-bind="dragOptions"
-			@end="onSortEnd"
-			@start="drag = true"
-		>
-			<!-- App Icon Card Start -->
-			<template v-if="!isLoading">
-				<div v-for="item in appList" :id="'app-' + item.name" :key="'app-' + item.name" class="handle">
-					<app-card
-						:item="item"
-						@configApp="showConfigPanel"
-						@importApp="showContainerPanel"
-						@updateState="getList"
-					></app-card>
-				</div>
-			</template>
-			<template v-else>
-				<div v-for="index in skCount" :id="'app-' + index" :key="'app-' + index" class="handle">
-					<app-card-skeleton :index="index"></app-card-skeleton>
-				</div>
-			</template>
-			<!-- App Icon Card End -->
-			<!-- <b-loading slot="footer" v-model="isLoading" :is-full-page="false"></b-loading> -->
-		</draggable>
-		<!-- App List End -->
-
-		<template v-if="oldAppList.length > 0">
+	<div class="home-section app-section has-text-left">
+		<div class="blur-background" aria-hidden="true"></div>
+		<div class="app-section-content">
 			<!-- Title Bar Start -->
-			<div class="title-bar is-flex is-align-items-center mt-2rem mb-5">
+			<div class="app-section-header is-flex is-align-items-center">
 				<app-section-title-tip
-					id="appTitle2"
+					id="appTitle1"
 					class="is-flex-grow-1 has-text-sub-04"
-					label="To be rebuilt."
-					title="Legacy app (To be rebuilt)."
+					label="Drag icons to sort."
+					title="Apps"
 				>
 				</app-section-title-tip>
+
+				<button class="button is-small is-dark is-rounded assistant-launcher mr-3" type="button" :aria-label="$t('Open AI assistant')" @click="showAssistantPanel">
+					<b-icon icon="creation" size="is-small" /><span>{{ $t('AI assistant') }}</span>
+				</button>
+
+				<b-dropdown animation="fade1" aria-role="menu" class="file-dropdown" position="is-bottom-left">
+					<template #trigger>
+						<b-icon
+							class="polymorphic is-clickable has-text-grey-100"
+							icon="plus-outline"
+							pack="casa"
+							size="is-24"
+						></b-icon>
+					</template>
+					<b-dropdown-item aria-role="menuitem" @click="showInstall(0, 'custom')">
+						{{ $t('Custom Install APP') }}
+					</b-dropdown-item>
+					<b-dropdown-item aria-role="menuitem" @click="showExternalLinkPanel">
+						{{ $t('Add external link/APP') }}
+					</b-dropdown-item>
+				</b-dropdown>
 			</div>
 			<!-- Title Bar End -->
 
 			<!-- App List Start -->
-			<div class="app-list contextmenu-canvas">
-				<!-- Application not imported Start -->
-				<div v-for="item in oldAppList" :id="'app-' + item.name" :key="'app-' + item.name" class="handle">
-					<app-card
-						:isCasa="false"
-						:item="item"
-						@configApp="showConfigPanel"
-						@importApp="showContainerPanel"
-						@updateState="getList"
-					></app-card>
-				</div>
-				<!-- Application not imported End -->
-			</div>
+			<draggable
+				v-model="appList"
+				:draggable="draggable"
+				class="app-list contextmenu-canvas"
+				tag="div"
+				v-bind="dragOptions"
+				@end="onSortEnd"
+				@start="drag = true"
+			>
+				<!-- App Icon Card Start -->
+				<template v-if="!isLoading">
+					<div v-for="item in appList" :id="'app-' + item.name" :key="'app-' + item.name" class="handle">
+						<app-card
+							:item="item"
+							@configApp="showConfigPanel"
+							@importApp="showContainerPanel"
+							@updateState="getList"
+						></app-card>
+					</div>
+				</template>
+				<template v-else>
+					<div v-for="index in skCount" :id="'app-' + index" :key="'app-' + index" class="handle">
+						<app-card-skeleton :index="index"></app-card-skeleton>
+					</div>
+				</template>
+				<!-- App Icon Card End -->
+				<!-- <b-loading slot="footer" v-model="isLoading" :is-full-page="false"></b-loading> -->
+			</draggable>
 			<!-- App List End -->
-		</template>
+
+			<template v-if="oldAppList.length > 0">
+				<!-- Title Bar Start -->
+				<div class="title-bar is-flex is-align-items-center mt-2rem mb-5">
+					<app-section-title-tip
+						id="appTitle2"
+						class="is-flex-grow-1 has-text-sub-04"
+						label="To be rebuilt."
+						title="Legacy app (To be rebuilt)."
+					>
+					</app-section-title-tip>
+				</div>
+				<!-- Title Bar End -->
+
+				<!-- App List Start -->
+				<div class="app-list contextmenu-canvas">
+					<!-- Application not imported Start -->
+					<div v-for="item in oldAppList" :id="'app-' + item.name" :key="'app-' + item.name" class="handle">
+						<app-card
+							:isCasa="false"
+							:item="item"
+							@configApp="showConfigPanel"
+							@importApp="showContainerPanel"
+							@updateState="getList"
+						></app-card>
+					</div>
+					<!-- Application not imported End -->
+				</div>
+				<!-- App List End -->
+			</template>
+		</div>
 	</div>
 </template>
 
@@ -589,6 +592,26 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.app-section {
+	position: relative;
+	border-radius: $backDropBorderRadius;
+
+	> .blur-background {
+		inset: 0;
+		pointer-events: none;
+	}
+}
+
+.app-section-content {
+	position: relative;
+	z-index: 10;
+	padding: 1rem 1.25rem;
+
+	@include mobile {
+		padding: 0.75rem;
+	}
+}
+
 .assistant-launcher { flex-shrink: 0; }
 
 // The always-visible sorting hint would cover the toolbar action on phones.
@@ -597,8 +620,6 @@ export default {
 }
 
 .app-section-header {
-	// Fixed height keeps the widget column offset in SideBar.vue lined up with
-	// the first row of app tiles.
 	height: $app-section-header-height;
 	margin-bottom: $app-section-header-gap;
 }
@@ -607,6 +628,7 @@ export default {
 	position: relative;
 	display: grid;
 	grid-template-columns: repeat(auto-fill, 7.5rem);
+	justify-content: space-between;
 	gap: 0.75rem;
 
 	> .handle {
