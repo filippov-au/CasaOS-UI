@@ -44,6 +44,10 @@ export default {
   },
 
   computed: {
+    appTitle() {
+      const title = typeof this.item.title === 'string' ? this.item.title : this.i18n(this.item.title)
+      return (this.item.app_type === 'system' ? this.$t(title || this.item.name) : title) || this.item.name
+    },
     tooltipLabel() {
       if (this.isContainerApp) {
         return this.$t('Import to CasaOS')
@@ -817,37 +821,34 @@ export default {
       </b-dropdown>
     </div>
     <!-- Action Button End -->
-    <div class="blur-background" />
     <div class="cards-content">
       <!-- Card Content Start -->
       <b-tooltip
         :always="isActiveTooltip" :animated="true" :label="tooltipLabel" :triggers="tooltipTriger"
         animation="fade1" class="in-card" type="is-white"
       >
-        <div class="has-text-centered is-flex is-justify-content-center is-flex-direction-column pt-5 pb-3px img-c">
-          <div class="is-flex is-justify-content-center">
-            <div class="is-relative">
-              <b-image
-                :class="dotClass(item.status, isLoading)" :src="item.icon"
-                :src-fallback="require('@/assets/img/app/default.svg')" class="is-64x64"
-                webp-fallback=".jpg" @click.native="openApp(item)"
-              />
-              <!-- Unstable -->
-              <CTooltip v-if="newAppIds.includes(item.name)" class="__position" content="NEW" />
-            </div>
+        <button class="app-launcher" type="button" :aria-label="appTitle" :title="appTitle" :disabled="!!isLoading" @click="openApp(item)">
+          <div class="app-icon is-relative">
+            <b-image
+              :class="dotClass(item.status, isLoading)" :src="item.icon"
+              :src-fallback="require('@/assets/img/app/default.svg')" class="is-64x64"
+              :alt="appTitle" webp-fallback=".jpg"
+            />
+            <!-- Unstable -->
+            <CTooltip v-if="newAppIds.includes(item.name)" class="__position" content="NEW" />
 
             <!-- Loading Bar Start -->
             <b-loading
               :active="isLoading" :can-cancel="false" :is-full-page="false"
               class="has-background-gray-800 op80 is-64x64"
-              style="top: auto;bottom: auto; right: auto; left: auto; border-radius: 11.5px"
+              style="border-radius: 11.5px"
             >
               <img :src="require('@/assets/img/loading/waiting-white.svg')" alt="loading" class="is-20x20">
             </b-loading>
             <!-- Loading Bar End -->
           </div>
-
-        </div>
+          <span class="app-title">{{ appTitle }}</span>
+        </button>
       </b-tooltip>
       <!-- Card Content End -->
       <!-- Update Progress Start -->

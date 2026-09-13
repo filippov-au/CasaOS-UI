@@ -606,18 +606,16 @@ export default {
 .app-list {
 	position: relative;
 	display: grid;
-	gap: 1rem;
+	grid-template-columns: repeat(auto-fill, 7.5rem);
+	gap: 0.75rem;
 
-	@include touch {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
+	> .handle {
+		min-width: 0;
 	}
 
-	@include desktop {
-		grid-template-columns: repeat(4, minmax(0, 1fr));
-	}
-
-	@include fullhd {
-		grid-template-columns: repeat(5, minmax(0, 1fr));
+	@include mobile {
+		grid-template-columns: repeat(auto-fill, 6.5rem);
+		gap: 0.5rem;
 	}
 }
 </style>

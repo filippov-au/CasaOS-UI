@@ -1,15 +1,8 @@
 <template>
-	<div class="common-card is-flex is-align-items-center is-justify-content-center p-55 app-card" :style="animation">
-		<!-- Action Button End -->
-		<div class="blur-background"></div>
-		<div class="cards-content">
-			<!-- Card Content Start -->
-			<div class="has-text-centered is-flex is-justify-content-center is-flex-direction-column pt-5 pb-3">
-				<div class="is-flex is-justify-content-center">
-					<b-image :src="require('@/assets/img/app/sk_icon.svg')" class="is-64x64"></b-image>
-				</div>
-			</div>
-			<!-- Card Content End -->˝
+	<div class="common-card app-card app-card-skeleton" :style="animation" aria-hidden="true">
+		<div class="app-launcher">
+			<b-image :src="require('@/assets/img/app/sk_icon.svg')" class="app-icon is-64x64"></b-image>
+			<span class="app-title-placeholder"></span>
 		</div>
 	</div>
 </template>
@@ -47,6 +40,14 @@ export default {
 	to {
 		opacity: 0.7;
 	}
+}
+
+.app-title-placeholder {
+	width: 4rem;
+	height: 0.75rem;
+	margin-top: 0.125rem;
+	border-radius: 0.25rem;
+	background: rgba(255, 255, 255, 0.2);
 }
 
 .common-card {
