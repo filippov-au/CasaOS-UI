@@ -402,5 +402,7 @@
   "To be rebuilt.": "Будет перестроено.",
   "launch-and-open": "Запустить и открыть",
   "Unable to check for updates": "Не удалось проверить обновления",
-  "Unable to start update": "Не удалось запустить обновление"
+  "Unable to start update": "Не удалось запустить обновление",
+  "AI assistant": "AI ассистент",
+  "Open AI assistant": "Открыть AI ассистента"
 }

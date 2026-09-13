@@ -1,7 +1,7 @@
 <template>
   <section class="assistant-panel modal-card" aria-labelledby="assistant-title">
     <aside :class="['assistant-sidebar', { 'mobile-open': showTopics }]">
-      <div class="sidebar-brand"><span class="brand-mark" aria-hidden="true">C</span><span>CasaOS</span><span class="brand-ai">AI</span><button type="button" class="quiet-button mobile-only" aria-label="Close conversations" @click="showTopics = false">×</button></div>
+      <div class="sidebar-brand"><span class="brand-mark" aria-hidden="true"><b-icon icon="creation" size="is-small" /></span><span>{{ $t('AI assistant') }}</span><button type="button" class="quiet-button mobile-only" aria-label="Close conversations" @click="showTopics = false">×</button></div>
       <button class="new-chat-button" type="button" :disabled="busy" @click="newConversation"><b-icon icon="square-edit-outline" size="is-small" /><span>New chat</span></button>
       <p class="topics-label">Your conversations</p>
       <nav class="topic-list" aria-label="Conversations">
@@ -15,7 +15,7 @@
     <main class="assistant-main">
       <header class="assistant-header">
         <button class="quiet-button mobile-only" type="button" aria-label="Show conversations" @click="showTopics = !showTopics"><b-icon icon="menu" /></button>
-        <h1 id="assistant-title">Casa AI</h1>
+        <h1 id="assistant-title">{{ $t('AI assistant') }}</h1>
         <button type="button" class="model-trigger" :disabled="busy || settingsLoading || !!session" :title="session ? 'Start a new chat to change models' : 'Choose a model'" :aria-expanded="showModels" @click="openModels">{{ selectedModelName }} <span aria-hidden="true">⌄</span></button>
         <button class="quiet-button close-button" type="button" aria-label="Close assistant" @click="$emit('close')">×</button>
       </header>
@@ -44,7 +44,7 @@
           <div class="session-toolbar"><span :class="['session-status', session.status]">{{ statusLabel }}</span></div>
           <article v-for="(event, index) in session.events" :key="index" :class="['assistant-event', event.kind]">
             <template v-if="event.kind === 'tool' || event.kind === 'action'"><details><summary><b-icon :icon="event.kind === 'action' ? 'cog-outline' : 'check-circle-outline'" size="is-small" />{{ event.kind === 'action' ? 'Action' : 'Result' }} · {{ toolLabel(event.tool) }}</summary><pre>{{ event.text }}</pre></details></template>
-            <template v-else><p v-if="event.kind !== 'user'" class="event-label">{{ event.kind === 'assistant' ? 'Casa AI' : 'Activity' }}</p><p class="event-text">{{ event.text }}</p></template>
+            <template v-else><p v-if="event.kind !== 'user'" class="event-label">{{ event.kind === 'assistant' ? $t('AI assistant') : 'Activity' }}</p><p class="event-text">{{ event.text }}</p></template>
           <a v-if="verifiedURL(event)" class="verified-app-link" :href="verifiedURL(event)" target="_blank" rel="noopener noreferrer">Open app ↗ <span>{{ verifiedURL(event) }}</span></a>
           </article>
           <div v-if="running" class="assistant-working" role="status"><span class="status-dot connected" />Working through your request…</div>
