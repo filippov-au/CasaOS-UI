@@ -44,12 +44,11 @@ module.exports = {
 			})
 		);
 
-		config.plugin("define").use(require("webpack/lib/DefinePlugin"), [
-			{
-				"process.env": JSON.stringify(process.env),
-				BUILT_TIME: JSON.stringify(Date()),
-			},
-		]);
+		// Preserve Vue CLI's public environment allowlist; never serialize the host environment.
+		config.plugin("define").tap((args) => {
+			args[0].BUILT_TIME = JSON.stringify(Date());
+			return args;
+		});
 		// 添加 NodePolyfillPlugin wbepack5 专用插件
 		config.plugin("node-polyfill").use(NodePolyfillPlugin);
 

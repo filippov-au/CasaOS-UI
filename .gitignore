@@ -4,6 +4,7 @@ node_modules
 /build
 
 # local env files
+.env
 .env.local
 .env.*.local
 
@@ -35,3 +36,13 @@ unused-files.json
 .turbo
 
 /packages/icewhale*
+
+# Local browser runs, generated reports and preview state
+.playwright-cli/
+/output/
+/coverage/
+/test-results/
+/playwright-report/
+/.cache/
+/assistant-preview-state/
+*.log

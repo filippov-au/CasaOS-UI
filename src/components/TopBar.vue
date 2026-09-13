@@ -2,6 +2,7 @@
 import AccountPanel from './account/AccountPanel.vue'
 import TerminalPanel from './logsAndTerminal/TerminalPanel.vue'
 import PortPanel from './settings/PortPanel.vue'
+import openAssistantSettings from './Assistant/openSettings'
 import { mixin } from '@/mixins/mixin'
 import messages from '@/assets/lang'
 
@@ -213,6 +214,10 @@ export default {
           initPort: this.port,
         },
       })
+    },
+    showAssistantSettings() {
+      this.$refs.settingsDrop.toggle()
+      openAssistantSettings(this, { focusTarget: this.$refs.settingsTrigger })
     },
     showChangeWallpaperModal() {
       this.$EventBus.$emit(events.SHOW_CHANGE_WALLPAPER_MODAL)
@@ -483,7 +488,7 @@ export default {
             type="is-dark"
             @click.native="$messageBus('dashboardsetting')"
           >
-            <p role="button">
+            <p ref="settingsTrigger" role="button" tabindex="0" :aria-label="$t('Settings')" @keydown.enter.prevent="$refs.settingsDrop.toggle()" @keydown.space.prevent="$refs.settingsDrop.toggle()">
               <b-icon
                 :class="{ 'update-icon-dot': updateAvailable }"
                 class="picon"
@@ -518,6 +523,20 @@ export default {
             </div>
           </div>
           <!-- Language End -->
+
+          <!-- AI Settings Start -->
+          <div class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4">
+            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
+              <b-icon class="mr-1 ml-2" icon="creation" size="is-small" />
+              {{ $t('AI settings') }}
+            </div>
+            <div class="ml-2">
+              <b-button rounded size="is-small" type="is-dark" :aria-label="$t('Open AI settings')" @click="showAssistantSettings">
+                {{ $t('Manage') }}
+              </b-button>
+            </div>
+          </div>
+          <!-- AI Settings End -->
 
           <!-- WebUI Port Start -->
           <div

@@ -10,6 +10,10 @@
 			>
 			</app-section-title-tip>
 
+			<button class="button is-small is-dark is-rounded assistant-launcher mr-3" type="button" :aria-label="$t('Open AI assistant')" @click="showAssistantPanel">
+				<b-icon icon="creation" size="is-small" /><span>{{ $t('AI assistant') }}</span>
+			</button>
+
 			<b-dropdown animation="fade1" aria-role="menu" class="file-dropdown" position="is-bottom-left">
 				<template #trigger>
 					<b-icon
@@ -94,9 +98,13 @@
 
 <script>
 import AppCard from './AppCard.vue'
+import AssistantPanel from '@/components/Assistant/AssistantPanel.vue'
+import { openAssistantDialog } from '@/components/Assistant/dialog'
 import AppCardSkeleton from './AppCardSkeleton.vue'
 import AppPanel from './AppPanel.vue'
-import ExternalLinkPanel from '@/components/Apps/ExternalLinkPanel'
+import ExternalLinkPanel from '@/components/Apps/ExternalLinkPanel.vue'
+import appStoreIcon from '@/assets/img/app/appstore.svg'
+import filesIcon from '@/assets/img/app/files.svg'
 import AppSectionTitleTip from './AppSectionTitleTip.vue'
 import draggable from 'vuedraggable'
 import xor from 'lodash/xor'
@@ -117,7 +125,7 @@ const builtInApplications = [
 		title: {
 			en_us: 'App Store'
 		},
-		icon: require(`@/assets/img/app/appstore.svg`),
+		icon: appStoreIcon,
 		status: 'running',
 		app_type: 'system'
 	},
@@ -127,7 +135,7 @@ const builtInApplications = [
 		title: {
 			en_us: 'Files'
 		},
-		icon: require(`@/assets/img/app/files.svg`),
+		icon: filesIcon,
 		status: 'running',
 		app_type: 'system'
 	}
@@ -203,6 +211,10 @@ export default {
 		this.getSkCount()
 	},
 	methods: {
+		showAssistantPanel () {
+			this.$store.commit('SET_SIDEBAR_CLOSE')
+			openAssistantDialog(this, AssistantPanel, { ariaLabel: this.$t('AI assistant') })
+		},
 		isMobile () {
 			const userAgent = navigator.userAgent
 			const mobileRegex =
@@ -577,6 +589,13 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.assistant-launcher { flex-shrink: 0; }
+
+// The always-visible sorting hint would cover the toolbar action on phones.
+@include until(480px) {
+	.app-section-header ::v-deep .home-app-tip .tooltip-content { display: none; }
+}
+
 .app-section-header {
 	// Fixed height keeps the widget column offset in SideBar.vue lined up with
 	// the first row of app tiles.

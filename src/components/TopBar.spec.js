@@ -1,10 +1,12 @@
 import { shallowMount } from '@vue/test-utils'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import TopBar from './TopBar.vue'
+import openAssistantSettings from './Assistant/openSettings'
 
 vi.mock('./account/AccountPanel.vue', () => ({ default: { render: h => h('div') } }))
 vi.mock('./logsAndTerminal/TerminalPanel.vue', () => ({ default: {} }))
 vi.mock('./settings/PortPanel.vue', () => ({ default: {} }))
+vi.mock('./Assistant/openSettings', () => ({ default: vi.fn() }))
 vi.mock('@/assets/lang', () => ({ default: {} }))
 vi.mock('@/mixins/mixin', () => ({ mixin: { methods: { getLangFromBrowser: () => 'en_us' } } }))
 
@@ -51,4 +53,16 @@ it('prevents overlapping checks from restoring an older result', async () => {
   finish(running); await first
   expect(vm.updateAvailable).toBe(false)
   expect(vm.updateStatusText).toBe('System update in progress')
+})
+
+it('opens the shared AI settings dialog from Settings and restores focus to its trigger', () => {
+  const vm = render(vi.fn())
+  const toggle = vi.fn()
+  const trigger = document.createElement('button')
+  vm.$refs.settingsDrop = { toggle }
+  vm.$refs.settingsTrigger = trigger
+  vm.showAssistantSettings()
+  expect(toggle).toHaveBeenCalledOnce()
+  expect(openAssistantSettings).toHaveBeenCalledWith(vm, { focusTarget: trigger })
+  expect(vm.showAssistantPanel).toBeUndefined()
 })
