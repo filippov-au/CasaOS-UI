@@ -279,9 +279,7 @@ $modal-background-background-color: rgba(0, 0, 0, 0.5);
 $sidebar-width: 22.5rem;
 
 // Dashboard
-// The app section header (title + actions) sits above the app grid. The widget
-// column is offset by the same header height and gap, so its first widget lines
-// up with the first row of app tiles.
+// App section header dimensions and spacing above the icon grid.
 $app-section-header-height: 2rem;
 $app-section-header-gap: 1rem;
 
