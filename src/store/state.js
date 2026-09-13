@@ -19,7 +19,6 @@ const state = {
 
   // System Config
   existingAppsSwitch: true,
-  rssSwitch: false,
 
   siteLoading: true,
   needInitialization: false,

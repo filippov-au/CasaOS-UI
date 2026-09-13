@@ -53,10 +53,6 @@ const mutations = {
     state.existingAppsSwitch = val
   },
 
-  SET_RSS_SWITCH(state, val) {
-    state.rssSwitch = val
-  },
-
   SET_HARDWARE_INFO(state, val) {
     state.hardwareInfo = val
   },
@@ -87,10 +83,6 @@ const mutations = {
   },
 
   // public params
-  SET_DEVICE_ID(state, val) {
-    state.device_id = val
-  },
-
   SET_ACCESS_ID(state, val) {
     state.access_id = val
   },

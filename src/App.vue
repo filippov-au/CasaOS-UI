@@ -5,14 +5,6 @@
 			<casa-wallpaper :animate="isWelcome?initAni:noneAni"></casa-wallpaper>
 			<!-- Background Layer End -->
 
-			<div class="base-bar is-flex"
-				 style="background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, #000000 100%);">
-				<!-- BrandBar Start -->
-				<brand-bar v-if="!$store.state.isMobile && $router.currentRoute.path === '/'"
-						   v-animate-css="brandAni"></brand-bar>
-				<!-- BrandBar End -->
-			</div>
-
 		</template>
 
 		<!-- Router View Start -->
@@ -23,7 +15,6 @@
 </template>
 
 <script>
-import BrandBar      from './components/BrandBar.vue'
 import CasaWallpaper from './components/wallpaper/CasaWallpaper.vue'
 import {mixin}       from './mixins/mixin';
 
@@ -60,7 +51,6 @@ const customIconConfig = {
 
 export default {
 	components: {
-		BrandBar,
 		CasaWallpaper
 	},
 	mixins: [mixin],
@@ -75,10 +65,6 @@ export default {
 			initAni: {
 				classes: 'zoomOutIn',
 				duration: 2500
-			},
-			brandAni: {
-				classes: "fadeInLeft",
-				duration: 700
 			},
 			"vh": "0px"
 		}
@@ -153,12 +139,6 @@ _____             _____ _____
 
 	&.is-dark-bg {
 		background-color: #000;
-	}
-
-	& .base-bar {
-		position: fixed;
-		bottom: 0;
-		z-index: 10;
 	}
 }
 </style>

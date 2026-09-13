@@ -69,9 +69,6 @@ module.exports = {
 	dashboardsetting_showexistingapp: async isShow => {
 		return await intermediateProcessor("casaos-ui:topbar:dashboardsetting_showexistingapp", {value: isShow})
 	},
-	dashboardsetting_news: async isShow => {
-		return await intermediateProcessor("casaos-ui:topbar:dashboardsetting_news", {value: isShow})
-	},
 	dashboardsetting_automountusb: async isShow => {
 		return await intermediateProcessor("casaos-ui:topbar:dashboardsetting_automountusb", {value: isShow})
 	},
@@ -188,9 +185,6 @@ module.exports = {
 		return await intermediateProcessor("casaos-ui:app:apps_external")
 	},
 
-	connect_news: async () => {
-		return await intermediateProcessor("casaos-ui:connect:connect_news")
-	},
 	connect_feedback: async () => {
 		return await intermediateProcessor("casaos-ui:connect:connect_feedback")
 	},

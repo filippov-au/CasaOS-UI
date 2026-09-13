@@ -31,9 +31,7 @@ export default {
       barData: {
         lang: this.getInitLang(),
         existing_apps_switch: true,
-        rss_switch: false,
       },
-      rss_switch: false,
       updateInfo: {
         current_version: '0',
         need_update: false,
@@ -86,17 +84,6 @@ export default {
         const lang = val.includes('_') ? val : 'en_us'
         this.$messageBus('dashboardsetting_language', lang)
         this.setLang(lang)
-      },
-      deep: true,
-    },
-    'barData.rss_switch': {
-      handler(val, oldValue) {
-        this.rss_switch = val
-        this.$store.commit('SET_RSS_SWITCH', val)
-        if (val === oldValue || val === undefined) {
-          return
-        }
-        this.$messageBus('dashboardsetting_news', val.toString())
       },
       deep: true,
     },
@@ -357,29 +344,6 @@ export default {
       })
     },
 
-    rssConfirm() {
-      if (this.rss_switch == false) {
-        this.barData.rss_switch = false
-        return this.saveData()
-      }
-      this.$buefy.dialog.confirm({
-        title: this.$t('Show news feed from CasaOS Blog'),
-        message: this.$t(
-          'CasaOS dashboard will get the the latest news feed of https://blog.casaos.io via Internet, which might leave your visit records to the site. Do you accept?',
-        ),
-        type: 'is-dark',
-        confirmText: this.$t('Accept'),
-        cancelText: this.$t('Cancel'),
-        onConfirm: () => {
-          this.barData.rss_switch = true
-          this.saveData()
-        },
-        onCancel: () => {
-          this.barData.rss_switch = false
-          this.rss_switch = false
-        },
-      })
-    },
     power(key) {
       if (this[key.toLowerCase()] !== 'Are you sure?') {
         this[key.toLowerCase()] = 'Are you sure?'
@@ -589,28 +553,6 @@ export default {
                   class="is-flex-direction-row-reverse mr-0 _small"
                   type="is-dark"
                   @input="saveData"
-                />
-              </b-field>
-            </div>
-          </div>
-          <!--  Show other Docker container app(s) Switch End  -->
-
-          <!--  Show other Docker container app(s) Switch Start  -->
-          <div
-            class="is-flex is-align-items-center mb-1 _is-large _box hover-effect _is-radius pr-2 mr-4 ml-4"
-          >
-            <div class="is-flex is-align-items-center is-flex-grow-1 _is-normal">
-              <b-icon class="mr-1 ml-2" icon="news-outline" pack="casa" size="is-20" />
-              {{ $t("Show news feed from CasaOS Blog") }}
-            </div>
-            <div>
-              <b-field>
-                <b-switch
-                  v-model="rss_switch"
-                  :native-value="barData.rss_switch"
-                  class="is-flex-direction-row-reverse mr-0 _small"
-                  type="is-dark"
-                  @input="rssConfirm"
                 />
               </b-field>
             </div>
